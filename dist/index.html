@@ -1,0 +1,1567 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Boutique Stock</title>
+
+<!-- PWA : installation sur l'écran d'accueil -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#b5542c">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Boutique Stock">
+<style>
+:root {
+  --bg: #f6f4f0;
+  --surface: #ffffff;
+  --surface-sunken: #efece5;
+  --border: #e0dcd3;
+  --ink: #1f1b16;
+  --ink-dim: #6b6358;
+  --accent: #b5542c;
+  --accent-ink: #ffffff;
+  --good: #2f7a4f;
+  --good-bg: #e7f2ea;
+  --warn: #a8651a;
+  --warn-bg: #faf0e2;
+  --bad: #b23b3b;
+  --bad-bg: #fbeaea;
+  --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #171411; --surface: #221e19; --surface-sunken: #1b1815; --border: #35302a;
+    --ink: #f3efe8; --ink-dim: #a69c8d; --accent: #e08a5b; --accent-ink: #1a1310;
+    --good: #6fbf8c; --good-bg: #1c2a20; --warn: #e0a858; --warn-bg: #2e2415;
+    --bad: #e2807f; --bad-bg: #2e1c1b; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #171411; --surface: #221e19; --surface-sunken: #1b1815; --border: #35302a;
+  --ink: #f3efe8; --ink-dim: #a69c8d; --accent: #e08a5b; --accent-ink: #1a1310;
+  --good: #6fbf8c; --good-bg: #1c2a20; --warn: #e0a858; --warn-bg: #2e2415;
+  --bad: #e2807f; --bad-bg: #2e1c1b; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.45;
+  padding-inline: 16px;
+  padding-block: calc(12px + env(safe-area-inset-top, 0px)) calc(12px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+h1, h2, h3 { font-family: var(--font-display); font-weight: 600; margin: 0; text-wrap: balance; }
+button { font: inherit; }
+img { max-width: 100%; }
+
+.app-fixed-top {
+  position: sticky; top: 0; z-index: 20;
+  background: var(--bg);
+  margin-inline: -16px; padding-inline: 16px;
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-block: 8px 14px; }
+.brand h1 { font-size: 1.3rem; }
+.who { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--ink-dim); flex-wrap: wrap; justify-content: flex-end; }
+.who .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--good); flex: none; }
+.who .dot.off { background: var(--bad); }
+
+nav.tabs { display: flex; gap: 4px; padding: 4px; background: var(--surface-sunken); border-radius: 12px; margin-bottom: 12px; }
+nav.tabs button {
+  flex: 1; border: none; background: transparent; color: var(--ink-dim);
+  padding: 9px 4px; border-radius: 9px; font-size: 0.84rem; font-weight: 600; cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+nav.tabs button.active { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,0.08); }
+.fixed-tab-panel { display: flex; flex-direction: column; gap: 10px; padding-bottom: 12px; }
+
+main { flex: 1; display: flex; flex-direction: column; gap: 16px; padding-bottom: 24px; }
+section[hidden] { display: none !important; }
+[hidden] { display: none !important; }
+.logout-link-top { background: none; border: 1px solid var(--border); color: var(--ink-dim); font-size: 0.72rem; cursor: pointer; padding: 4px 9px; border-radius: 8px; }
+
+.tiles { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; }
+.tile { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 10px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.tile .label { font-size: 0.68rem; color: var(--ink-dim); letter-spacing: 0.02em; text-transform: uppercase; }
+.tile .value { font-size: 1.15rem; font-weight: 700; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.tile .value.small { font-size: 0.95rem; }
+
+.alert-banner { display: flex; align-items: center; gap: 8px; background: var(--warn-bg); color: var(--warn); border-radius: 10px; padding: 9px 12px; font-size: 0.82rem; font-weight: 600; }
+
+.searchbar { display: flex; gap: 8px; }
+.searchbar input[type="search"] { flex: 1; min-width: 0; border: 1px solid var(--border); background: var(--surface); color: var(--ink); border-radius: 10px; padding: 9px 12px; font-size: 0.9rem; }
+.searchbar select { border: 1px solid var(--border); background: var(--surface); color: var(--ink); border-radius: 10px; padding: 9px 8px; font-size: 0.85rem; max-width: 40%; }
+
+.article-list { display: flex; flex-direction: column; gap: 8px; }
+.article-row { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 11px 13px; display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.article-row .info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.article-row .name { font-weight: 600; font-size: 0.92rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.article-row .meta { font-size: 0.75rem; color: var(--ink-dim); }
+.article-row .qty { flex: none; text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-weight: 700; font-size: 1rem; min-width: 44px; }
+.article-row .qty .unit { font-size: 0.65rem; font-weight: 500; color: var(--ink-dim); display: block; font-family: var(--font-body); }
+.stock-pill { flex: none; width: 8px; height: 8px; border-radius: 50%; }
+.stock-pill.ok { background: var(--good); }
+.stock-pill.low { background: var(--warn); }
+.stock-pill.out { background: var(--bad); }
+
+.empty-state { text-align: center; color: var(--ink-dim); padding: 32px 16px; font-size: 0.88rem; }
+
+.btn { border: none; border-radius: 10px; padding: 11px 16px; font-weight: 600; font-size: 0.9rem; cursor: pointer; text-align: center; }
+.btn-primary { background: var(--accent); color: var(--accent-ink); }
+.btn-ghost { background: var(--surface-sunken); color: var(--ink); }
+.btn-block { width: 100%; }
+.btn[disabled] { opacity: 0.5; cursor: default; }
+.fab {
+  position: fixed; right: 20px; bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  width: 52px; height: 52px; border-radius: 50%; background: var(--accent); color: var(--accent-ink);
+  border: none; font-size: 1.5rem; line-height: 1; box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+
+.move-type-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.move-type-btn { border: 1.5px solid var(--border); background: var(--surface); color: var(--ink-dim); border-radius: 10px; padding: 11px 6px; font-size: 0.82rem; font-weight: 700; cursor: pointer; text-align: center; }
+.move-type-btn.active[data-type="vente"] { border-color: var(--good); color: var(--good); background: var(--good-bg); }
+.move-type-btn.active[data-type="reassort"] { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--surface)); }
+.move-type-btn.active[data-type="perte"] { border-color: var(--bad); color: var(--bad); background: var(--bad-bg); }
+
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field label { font-size: 0.76rem; font-weight: 600; color: var(--ink-dim); }
+.field select, .field input { border: 1px solid var(--border); background: var(--surface); color: var(--ink); border-radius: 10px; padding: 10px 12px; font-size: 0.95rem; width: 100%; }
+.qty-stepper { display: flex; align-items: center; gap: 10px; }
+.qty-stepper button { width: 42px; height: 42px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-sunken); color: var(--ink); font-size: 1.2rem; cursor: pointer; flex: none; }
+.qty-stepper input { text-align: center; font-family: var(--font-mono); font-weight: 700; font-size: 1.1rem; }
+.current-stock-hint { font-size: 0.78rem; color: var(--ink-dim); }
+.current-stock-hint strong { color: var(--ink); }
+
+form { display: flex; flex-direction: column; gap: 14px; }
+.sheet-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: flex-end; z-index: 30; }
+.sheet { background: var(--bg); width: 100%; max-height: 88vh; overflow-y: auto; border-radius: 18px 18px 0 0; padding: 18px 16px calc(18px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 14px; }
+.sheet-head { display: flex; align-items: center; justify-content: space-between; }
+.sheet-head h2 { font-size: 1.05rem; }
+.sheet-close { background: none; border: none; color: var(--ink-dim); font-size: 1.3rem; cursor: pointer; padding: 4px 8px; }
+
+.history-list { display: flex; flex-direction: column; gap: 6px; }
+.history-row { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; display: flex; align-items: center; gap: 10px; }
+.history-row .kind { flex: none; width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 700; }
+.history-row .kind.vente { background: var(--good-bg); color: var(--good); }
+.history-row .kind.reassort { background: color-mix(in srgb, var(--accent) 15%, var(--surface)); color: var(--accent); }
+.history-row .kind.perte { background: var(--bad-bg); color: var(--bad); }
+.history-row .info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.history-row .info .line1 { font-size: 0.86rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.history-row .info .line2 { font-size: 0.72rem; color: var(--ink-dim); }
+.history-row .amount { flex: none; font-family: var(--font-mono); font-weight: 700; font-size: 0.88rem; }
+.history-row .amount.neg { color: var(--bad); }
+.history-row .amount.pos { color: var(--good); }
+
+.toast { position: fixed; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 18px; border-radius: 999px; font-size: 0.85rem; font-weight: 600; z-index: 50; box-shadow: 0 6px 16px rgba(0,0,0,0.25); }
+
+.role-badge { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; }
+.role-badge.gerant { background: color-mix(in srgb, var(--accent) 18%, var(--surface)); color: var(--accent); }
+.role-badge.vendeur { background: var(--good-bg); color: var(--good); }
+
+.import-preview { display: flex; flex-direction: column; gap: 6px; max-height: 40vh; overflow-y: auto; border: 1px solid var(--border); border-radius: 10px; padding: 8px; }
+.import-row { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; padding: 6px 4px; border-bottom: 1px solid var(--border); }
+.import-row:last-child { border-bottom: none; }
+.import-row .iname { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.import-row .ibadge { flex: none; font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; padding: 2px 7px; border-radius: 999px; }
+.import-row .ibadge.new { background: var(--good-bg); color: var(--good); }
+.import-row .ibadge.update { background: color-mix(in srgb, var(--accent) 15%, var(--surface)); color: var(--accent); }
+.import-row .ibadge.skip { background: var(--bad-bg); color: var(--bad); }
+.import-summary { font-size: 0.82rem; color: var(--ink-dim); }
+
+.status-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.status-row:empty { display: none; }
+.status-pill { display: inline-flex; align-items: center; gap: 6px; font-size: 0.74rem; font-weight: 600; padding: 4px 9px; border-radius: 999px; margin-bottom: 8px; }
+.offline-pill { background: var(--bad-bg); color: var(--bad); }
+.offline-pill .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--bad); }
+.pending-pill { background: var(--warn-bg); color: var(--warn); }
+.history-row.pending { opacity: 0.75; border-style: dashed; }
+.history-row .pending-tag { flex: none; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; color: var(--warn); background: var(--warn-bg); padding: 2px 6px; border-radius: 999px; }
+
+.login-screen { flex: 1; display: flex; align-items: center; justify-content: center; padding-block: 24px; }
+.login-card { width: 100%; max-width: 320px; display: flex; flex-direction: column; gap: 14px; }
+.login-card h1 { font-size: 1.5rem; text-align: center; }
+.login-card .subtitle { text-align: center; color: var(--ink-dim); font-size: 0.85rem; margin-top: -8px; }
+.login-error { color: var(--bad); font-size: 0.82rem; min-height: 1.2em; text-align: center; }
+.logout-link { background: none; border: none; color: var(--ink-dim); font-size: 0.78rem; cursor: pointer; padding: 4px; text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<div class="app-fixed-top" id="fixedTop" hidden>
+  <div class="topbar">
+    <div class="brand"><h1>Boutique Stock</h1></div>
+    <div class="who" id="whoBox">
+      <span class="dot off" id="whoDot"></span>
+      <span id="whoLabel">Connexion…</span>
+      <button class="logout-link-top" id="changePasswordBtn" hidden>Mot de passe</button>
+      <button class="logout-link-top" id="logoutBtn" hidden>Se déconnecter</button>
+    </div>
+  </div>
+  <div class="status-row">
+    <span class="status-pill offline-pill" id="offlineStatus" hidden>
+      <span class="dot off" id="offlineDot"></span>
+      <span id="offlineLabel">Hors-ligne</span>
+    </span>
+    <span class="status-pill pending-pill" id="pendingBadge" hidden></span>
+  </div>
+  <nav class="tabs">
+    <button class="tab-btn active" data-tab="dashboard">Tableau de bord</button>
+    <button class="tab-btn" data-tab="stock">Stock</button>
+    <button class="tab-btn" data-tab="historique">Historique</button>
+    <button class="tab-btn" data-tab="articles" id="articlesTabBtn">Articles</button>
+  </nav>
+
+  <div class="fixed-tab-panel" id="fixedPanel-dashboard"></div>
+
+  <div class="fixed-tab-panel" id="fixedPanel-stock" hidden>
+    <div class="tiles" id="summaryTiles"></div>
+    <div id="alertBanner"></div>
+    <div class="searchbar" id="stockSearchbar">
+      <input type="search" id="searchInput" placeholder="Rechercher un article…">
+      <select id="categoryFilter"><option value="">Toutes catégories</option></select>
+    </div>
+  </div>
+
+  <div class="fixed-tab-panel" id="fixedPanel-historique" hidden>
+    <div class="searchbar">
+      <select id="historyFilter" style="max-width:none; flex:1;">
+        <option value="">Tous les mouvements</option>
+        <option value="vente">Ventes</option>
+        <option value="reassort">Réassorts</option>
+        <option value="perte">Casse / Perte</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="fixed-tab-panel" id="fixedPanel-articles" hidden>
+    <button class="btn btn-ghost btn-block" id="addArticleBtn">+ Ajouter un article</button>
+    <button class="btn btn-ghost btn-block" id="importExcelBtn">⬆ Importer depuis Excel</button>
+    <button class="btn btn-ghost btn-block" id="exportExcelBtn">⬇ Exporter en Excel</button>
+    <input type="file" id="importExcelInput" accept=".xlsx,.xls" hidden>
+  </div>
+</div>
+
+<div id="loginScreen" class="login-screen" hidden>
+  <div class="login-card">
+    <h1>Connexion</h1>
+    <p class="subtitle">Accédez au stock de la boutique</p>
+    <form id="loginForm">
+      <div class="field"><label for="loginEmail">Email</label><input id="loginEmail" type="email" required autocomplete="username"></div>
+      <div class="field" style="margin-top:10px"><label for="loginPassword">Mot de passe</label><input id="loginPassword" type="password" required autocomplete="current-password"></div>
+      <button type="submit" class="btn btn-primary btn-block" style="margin-top:14px" id="loginSubmitBtn">Se connecter</button>
+      <p class="login-error" id="loginError"></p>
+    </form>
+    <button type="button" class="btn btn-ghost btn-block" style="margin-top:10px" id="showSignupBtn">Créer une boutique</button>
+  </div>
+</div>
+
+<div id="signupScreen" class="login-screen" hidden>
+  <div class="login-card">
+    <h1>Nouvelle boutique</h1>
+    <p class="subtitle">Créez votre compte propriétaire</p>
+    <form id="signupForm">
+      <div class="field"><label for="signupShopName">Nom de la boutique</label><input id="signupShopName" type="text" required></div>
+      <div class="field" style="margin-top:10px"><label for="signupEmail">Email</label><input id="signupEmail" type="email" required autocomplete="username"></div>
+      <div class="field" style="margin-top:10px"><label for="signupPassword">Mot de passe</label><input id="signupPassword" type="password" required minlength="8" autocomplete="new-password"></div>
+      <p class="current-stock-hint" style="margin-top:4px">Au moins 8 caractères.</p>
+      <button type="submit" class="btn btn-primary btn-block" style="margin-top:14px" id="signupSubmitBtn">Créer ma boutique</button>
+      <p class="login-error" id="signupError"></p>
+    </form>
+    <button type="button" class="btn btn-ghost btn-block" style="margin-top:10px" id="showLoginBtn">J'ai déjà un compte</button>
+  </div>
+</div>
+
+<main id="app" hidden>
+  <section id="tab-dashboard">
+    <div class="tiles" id="dashboardTiles"></div>
+    <div id="dashboardAlert"></div>
+    <h3 style="margin-top:4px">Top 5 des ventes (7 derniers jours)</h3>
+    <div class="article-list" id="dashboardTopSales"></div>
+  </section>
+
+  <section id="tab-stock" hidden>
+    <div class="article-list" id="articleList"></div>
+  </section>
+
+  <section id="tab-historique" hidden>
+    <div class="history-list" id="historyList"></div>
+  </section>
+
+  <section id="tab-articles" hidden>
+    <div class="article-list" id="articlesManageList"></div>
+  </section>
+</main>
+
+<button class="fab" id="fabMove" title="Enregistrer un mouvement" hidden>+</button>
+<div id="toastHost"></div>
+
+<!-- Config locale (vos clés Supabase) -->
+<script src="config.js"></script>
+<!-- SDK Supabase -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<!-- Export Excel -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script>
+// ============================================================================
+// Connexion Supabase
+// ============================================================================
+const supa = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+
+// ============================================================================
+// File d'attente hors-ligne (IndexedDB)
+// ----------------------------------------------------------------------------
+// Les ventes et pertes enregistrées sans réseau sont stockées ici le temps
+// que la connexion revienne. Le réassort reste réservé au gérant et nécessite
+// une connexion (moins urgent, et évite de complexifier la logique de reprise).
+// ============================================================================
+const OFFLINE_DB_NAME = 'boutique-stock-offline';
+const OFFLINE_STORE = 'pending_movements';
+let offlineDb = null;
+
+function openOfflineDb() {
+  return new Promise((resolve, reject) => {
+    if (offlineDb) { resolve(offlineDb); return; }
+    const req = indexedDB.open(OFFLINE_DB_NAME, 1);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(OFFLINE_STORE)) {
+        db.createObjectStore(OFFLINE_STORE, { keyPath: 'localId' });
+      }
+    };
+    req.onsuccess = () => { offlineDb = req.result; resolve(offlineDb); };
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function addPendingMovement(entry) {
+  const db = await openOfflineDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(OFFLINE_STORE, 'readwrite');
+    tx.objectStore(OFFLINE_STORE).add(entry);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function getPendingMovements() {
+  const db = await openOfflineDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(OFFLINE_STORE, 'readonly');
+    const req = tx.objectStore(OFFLINE_STORE).getAll();
+    req.onsuccess = () => resolve(req.result || []);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function removePendingMovement(localId) {
+  const db = await openOfflineDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(OFFLINE_STORE, 'readwrite');
+    tx.objectStore(OFFLINE_STORE).delete(localId);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+function timeAgo(ts) {
+  if (!ts) return '';
+  const diffSec = Math.max(0, Math.floor((Date.now() - ts) / 1000));
+  if (diffSec < 60) return "à l'instant";
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `il y a ${diffMin} min`;
+  const diffH = Math.floor(diffMin / 60);
+  if (diffH < 24) return `il y a ${diffH} h`;
+  const diffD = Math.floor(diffH / 24);
+  if (diffD < 30) return `il y a ${diffD} j`;
+  return new Date(ts).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+}
+
+// ---------------------------------------------------------------------------
+// State
+// ---------------------------------------------------------------------------
+let articles = {};   // id -> {name, category, qty, buy_price, sell_price, threshold}
+let movements = [];  // [{id, article_id, type, qty, by_name, at}]
+let currentTab = 'dashboard';
+let currentProfile = null; // {role, display_name, email}
+let articlesChannel = null;
+let movementsChannel = null;
+let pendingCount = 0; // nombre de mouvements en attente de synchronisation (hors-ligne)
+let syncInProgress = false;
+let pendingShopName = null; // nom choisi à l'inscription, en attente de confirmation d'email
+
+function isGerant() {
+  return currentProfile && currentProfile.role === 'gerant';
+}
+
+function toast(msg) {
+  const host = document.getElementById('toastHost');
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.textContent = msg;
+  host.appendChild(el);
+  setTimeout(() => el.remove(), 2200);
+}
+function fmtFCFA(n) {
+  if (n == null || isNaN(n)) return '—';
+  return Math.round(n).toLocaleString('fr-FR') + ' F';
+}
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function stockLevel(a) {
+  const qty = a.qty || 0;
+  const th = a.threshold ?? 3;
+  if (qty <= 0) return 'out';
+  if (qty <= th) return 'low';
+  return 'ok';
+}
+
+// ---------------------------------------------------------------------------
+// Tabs
+// ---------------------------------------------------------------------------
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentTab = btn.dataset.tab;
+    ['dashboard', 'stock', 'historique', 'articles'].forEach(t => {
+      document.getElementById('tab-' + t).hidden = (t !== currentTab);
+      document.getElementById('fixedPanel-' + t).hidden = (t !== currentTab);
+    });
+    document.getElementById('fabMove').hidden = (currentTab !== 'stock');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Rendering
+// ---------------------------------------------------------------------------
+function renderSummary() {
+  const list = Object.entries(articles);
+  const totalRefs = list.length;
+  const totalUnits = list.reduce((s, [, a]) => s + (a.qty || 0), 0);
+  const stockValue = list.reduce((s, [, a]) => s + (a.qty || 0) * (a.buy_price || 0), 0);
+  const lowStock = list.filter(([, a]) => (a.qty || 0) <= (a.threshold ?? 3) && (a.qty || 0) > 0);
+  const outStock = list.filter(([, a]) => (a.qty || 0) <= 0);
+
+  const gerant = isGerant();
+  document.getElementById('summaryTiles').innerHTML = `
+    <div class="tile"><div class="label">Références</div><div class="value">${totalRefs}</div></div>
+    <div class="tile"><div class="label">Unités en stock</div><div class="value">${totalUnits}</div></div>
+    ${gerant ? `<div class="tile"><div class="label">Valeur stock</div><div class="value small">${fmtFCFA(stockValue)}</div></div>` : ''}
+  `;
+  const alertCount = lowStock.length + outStock.length;
+  document.getElementById('alertBanner').innerHTML = alertCount > 0
+    ? `<div class="alert-banner">⚠ ${outStock.length} article(s) épuisé(s), ${lowStock.length} en stock bas</div>`
+    : '';
+}
+
+function populateCategoryFilter() {
+  const sel = document.getElementById('categoryFilter');
+  const cats = [...new Set(Object.values(articles).map(a => a.category).filter(Boolean))].sort();
+  const current = sel.value;
+  sel.innerHTML = '<option value="">Toutes catégories</option>' + cats.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+  sel.value = current;
+}
+
+function renderArticleList() {
+  const search = document.getElementById('searchInput').value.trim().toLowerCase();
+  const cat = document.getElementById('categoryFilter').value;
+  const list = Object.entries(articles)
+    .filter(([, a]) => !search || a.name.toLowerCase().includes(search))
+    .filter(([, a]) => !cat || a.category === cat)
+    .sort((a, b) => a[1].name.localeCompare(b[1].name, 'fr'));
+
+  const host = document.getElementById('articleList');
+  if (list.length === 0) {
+    host.innerHTML = `<div class="empty-state">${Object.keys(articles).length === 0 ? "Aucun article pour l'instant. Ajoutez-en dans l'onglet Articles." : "Aucun résultat."}</div>`;
+    return;
+  }
+  host.innerHTML = list.map(([id, a]) => `
+    <div class="article-row" data-id="${id}">
+      <span class="stock-pill ${stockLevel(a)}"></span>
+      <div class="info">
+        <div class="name">${escapeHtml(a.name)}</div>
+        <div class="meta">${escapeHtml(a.category || 'Sans catégorie')} · ${fmtFCFA(a.sell_price)}</div>
+      </div>
+      <div class="qty">${a.qty ?? 0}<span class="unit">unités</span></div>
+    </div>
+  `).join('');
+  host.querySelectorAll('.article-row').forEach(row => {
+    row.addEventListener('click', () => openMoveSheet(row.dataset.id));
+  });
+}
+
+function renderHistory() {
+  const filter = document.getElementById('historyFilter').value;
+  const list = movements.filter(m => !filter || m.type === filter).slice(0, 100);
+
+  const host = document.getElementById('historyList');
+  if (list.length === 0) {
+    host.innerHTML = `<div class="empty-state">Aucun mouvement enregistré.</div>`;
+    return;
+  }
+  const kindLabel = { vente: 'V', reassort: 'R', perte: 'P' };
+  const kindWord = { vente: 'Vente', reassort: 'Réassort', perte: 'Casse/Perte' };
+  host.innerHTML = list.map(m => {
+    const art = articles[m.article_id];
+    const name = art ? art.name : '(article supprimé)';
+    const sign = m.type === 'reassort' ? '+' : '−';
+    const cls = m.type === 'reassort' ? 'pos' : 'neg';
+    const when = m.at ? timeAgo(new Date(m.at).getTime()) : '';
+    return `
+      <div class="history-row ${m.pending ? 'pending' : ''}">
+        <div class="kind ${m.type}">${kindLabel[m.type] || '?'}</div>
+        <div class="info">
+          <div class="line1">${escapeHtml(name)}</div>
+          <div class="line2">${kindWord[m.type] || m.type} · ${escapeHtml(m.by_name || 'inconnu')} · ${when}</div>
+        </div>
+        ${m.pending ? '<span class="pending-tag">En attente</span>' : ''}
+        <div class="amount ${cls}">${sign}${m.qty}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderArticlesManage() {
+  const host = document.getElementById('articlesManageList');
+  const list = Object.entries(articles).sort((a, b) => a[1].name.localeCompare(b[1].name, 'fr'));
+  if (list.length === 0) {
+    host.innerHTML = `<div class="empty-state">Aucun article. Ajoutez le premier ci-dessus.</div>`;
+    return;
+  }
+  host.innerHTML = list.map(([id, a]) => {
+    const margin = (a.sell_price || 0) - (a.buy_price || 0);
+    return `
+    <div class="article-row" data-id="${id}">
+      <div class="info">
+        <div class="name">${escapeHtml(a.name)}</div>
+        <div class="meta">${escapeHtml(a.category || 'Sans catégorie')} · Achat ${fmtFCFA(a.buy_price)} · Vente ${fmtFCFA(a.sell_price)} · Marge ${fmtFCFA(margin)}</div>
+      </div>
+      <div class="qty">${a.qty ?? 0}<span class="unit">unités</span></div>
+    </div>`;
+  }).join('');
+  host.querySelectorAll('.article-row').forEach(row => {
+    row.addEventListener('click', () => openArticleSheet(row.dataset.id));
+  });
+}
+
+function renderAll() {
+  populateCategoryFilter();
+  renderSummary();
+  renderArticleList();
+  renderHistory();
+  renderArticlesManage();
+  renderDashboard();
+}
+
+// ---------------------------------------------------------------------------
+// Tableau de bord — indicateurs du jour et des 7 derniers jours, construits
+// à partir des données déjà chargées (articles, movements) : aucune requête
+// supplémentaire.
+// ---------------------------------------------------------------------------
+function renderDashboard() {
+  const gerant = isGerant();
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const sevenDaysAgo = now.getTime() - 7 * 24 * 60 * 60 * 1000;
+
+  const salesToday = movements.filter(m => m.type === 'vente' && new Date(m.at).getTime() >= startOfToday);
+  const unitsSoldToday = salesToday.reduce((s, m) => s + (m.qty || 0), 0);
+  const revenueToday = salesToday.reduce((s, m) => {
+    const a = articles[m.article_id];
+    return s + (m.qty || 0) * (a?.sell_price || 0);
+  }, 0);
+
+  const sales7d = movements.filter(m => m.type === 'vente' && new Date(m.at).getTime() >= sevenDaysAgo);
+  const margin7d = sales7d.reduce((s, m) => {
+    const a = articles[m.article_id];
+    if (!a) return s;
+    return s + (m.qty || 0) * ((a.sell_price || 0) - (a.buy_price || 0));
+  }, 0);
+
+  const list = Object.entries(articles);
+  const lowStock = list.filter(([, a]) => (a.qty || 0) <= (a.threshold ?? 3) && (a.qty || 0) > 0);
+  const outStock = list.filter(([, a]) => (a.qty || 0) <= 0);
+  const alertCount = lowStock.length + outStock.length;
+
+  document.getElementById('dashboardTiles').innerHTML = `
+    <div class="tile"><div class="label">Ventes aujourd'hui</div><div class="value">${unitsSoldToday}</div></div>
+    ${gerant ? `<div class="tile"><div class="label">CA aujourd'hui</div><div class="value small">${fmtFCFA(revenueToday)}</div></div>` : ''}
+    ${gerant ? `<div class="tile"><div class="label">Marge 7 jours</div><div class="value small">${fmtFCFA(margin7d)}</div></div>` : ''}
+  `;
+
+  document.getElementById('dashboardAlert').innerHTML = alertCount > 0
+    ? `<div class="alert-banner">⚠ ${outStock.length} article(s) épuisé(s), ${lowStock.length} en stock bas</div>`
+    : '';
+
+  // Top 5 des articles les plus vendus sur 7 jours (en quantité)
+  const soldByArticle = {};
+  sales7d.forEach(m => {
+    soldByArticle[m.article_id] = (soldByArticle[m.article_id] || 0) + (m.qty || 0);
+  });
+  const top5 = Object.entries(soldByArticle)
+    .map(([articleId, qty]) => ({ articleId, qty, article: articles[articleId] }))
+    .filter(e => e.article)
+    .sort((a, b) => b.qty - a.qty)
+    .slice(0, 5);
+
+  const topEl = document.getElementById('dashboardTopSales');
+  if (top5.length === 0) {
+    topEl.innerHTML = '<div class="empty-state">Aucune vente sur les 7 derniers jours.</div>';
+  } else {
+    topEl.innerHTML = top5.map(e => `
+      <div class="article-row">
+        <div class="info">
+          <div class="name">${escapeHtml(e.article.name)}</div>
+          <div class="meta">${escapeHtml(e.article.category || 'Sans catégorie')}</div>
+        </div>
+        <div class="qty">${e.qty}<span class="unit">vendus</span></div>
+      </div>
+    `).join('');
+  }
+}
+
+function applyRoleToUI() {
+  const gerant = isGerant();
+  document.getElementById('articlesTabBtn').hidden = !gerant;
+  // Si le vendeur était sur l'onglet Articles au moment où le rôle se charge, on le ramène sur Stock
+  if (!gerant && currentTab === 'articles') {
+    currentTab = 'stock';
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === 'stock'));
+    document.getElementById('tab-stock').hidden = false;
+    document.getElementById('tab-historique').hidden = true;
+    document.getElementById('tab-articles').hidden = true;
+    document.getElementById('fixedPanel-stock').hidden = false;
+    document.getElementById('fixedPanel-historique').hidden = true;
+    document.getElementById('fixedPanel-articles').hidden = true;
+  }
+  const label = gerant ? 'Gérant' : 'Vendeur';
+  const cls = gerant ? 'gerant' : 'vendeur';
+  document.getElementById('whoLabel').innerHTML = `${escapeHtml(currentProfile.display_name || currentProfile.email)} <span class="role-badge ${cls}">${label}</span>`;
+}
+
+// ---------------------------------------------------------------------------
+// Movement sheet
+// ---------------------------------------------------------------------------
+function openMoveSheet(preselectId) {
+  if (Object.keys(articles).length === 0) {
+    toast("Ajoutez d'abord un article dans l'onglet Articles.");
+    return;
+  }
+  const options = Object.entries(articles)
+    .sort((a, b) => a[1].name.localeCompare(b[1].name, 'fr'))
+    .map(([id, a]) => `<option value="${id}" ${id === preselectId ? 'selected' : ''}>${escapeHtml(a.name)} (${a.qty ?? 0} en stock)</option>`)
+    .join('');
+
+  const gerant = isGerant();
+  const backdrop = document.createElement('div');
+  backdrop.className = 'sheet-backdrop';
+  backdrop.innerHTML = `
+    <div class="sheet">
+      <div class="sheet-head"><h2>Nouveau mouvement</h2><button class="sheet-close" id="closeMoveSheet">✕</button></div>
+      <form id="moveForm">
+        <div class="move-type-row">
+          <button type="button" class="move-type-btn active" data-type="vente">Vente</button>
+          ${gerant ? '<button type="button" class="move-type-btn" data-type="reassort">Réassort</button>' : ''}
+          <button type="button" class="move-type-btn" data-type="perte">Casse/Perte</button>
+        </div>
+        <div class="field">
+          <label for="moveArticle">Article</label>
+          <select id="moveArticle" required>${options}</select>
+        </div>
+        <div class="field">
+          <label>Quantité</label>
+          <div class="qty-stepper">
+            <button type="button" id="qtyMinus">−</button>
+            <input type="number" id="moveQty" value="1" min="1" inputmode="numeric">
+            <button type="button" id="qtyPlus">+</button>
+          </div>
+          <div class="current-stock-hint" id="stockHint"></div>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block" id="moveSubmitBtn">Enregistrer la vente</button>
+      </form>
+    </div>
+  `;
+  document.body.appendChild(backdrop);
+  backdrop.addEventListener('click', (e) => { if (e.target === backdrop) backdrop.remove(); });
+  document.getElementById('closeMoveSheet').addEventListener('click', () => backdrop.remove());
+
+  let activeType = 'vente';
+  const typeBtns = backdrop.querySelectorAll('.move-type-btn');
+  const submitBtn = document.getElementById('moveSubmitBtn');
+  const verbByType = { vente: 'Enregistrer la vente', reassort: "Enregistrer l'entrée", perte: 'Enregistrer la perte' };
+  typeBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      typeBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeType = btn.dataset.type;
+      submitBtn.textContent = verbByType[activeType];
+      updateStockHint();
+    });
+  });
+
+  const articleSelect = document.getElementById('moveArticle');
+  const qtyInput = document.getElementById('moveQty');
+  function updateStockHint() {
+    const a = articles[articleSelect.value];
+    if (!a) return;
+    const hint = document.getElementById('stockHint');
+    if (activeType === 'vente' || activeType === 'perte') {
+      hint.innerHTML = `Stock actuel : <strong>${a.qty ?? 0}</strong> — après : <strong>${Math.max(0, (a.qty ?? 0) - (parseInt(qtyInput.value) || 0))}</strong>`;
+    } else {
+      hint.innerHTML = `Stock actuel : <strong>${a.qty ?? 0}</strong> — après : <strong>${(a.qty ?? 0) + (parseInt(qtyInput.value) || 0)}</strong>`;
+    }
+  }
+  articleSelect.addEventListener('change', updateStockHint);
+  qtyInput.addEventListener('input', updateStockHint);
+  document.getElementById('qtyMinus').addEventListener('click', () => { qtyInput.value = Math.max(1, (parseInt(qtyInput.value) || 1) - 1); updateStockHint(); });
+  document.getElementById('qtyPlus').addEventListener('click', () => { qtyInput.value = (parseInt(qtyInput.value) || 1) + 1; updateStockHint(); });
+  updateStockHint();
+
+  document.getElementById('moveForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const articleId = articleSelect.value;
+    const qty = parseInt(qtyInput.value) || 0;
+    if (!articleId || qty <= 0) return;
+    const a = articles[articleId];
+    if ((activeType === 'vente' || activeType === 'perte') && qty > (a.qty ?? 0)) {
+      toast('Quantité supérieure au stock disponible.');
+      return;
+    }
+    submitBtn.disabled = true;
+    try {
+      // Réassort : toujours en ligne (réservé au gérant, moins urgent à enregistrer immédiatement).
+      // Vente / Perte : tolère l'absence de réseau, mise en file d'attente locale.
+      if (activeType === 'reassort') {
+        await recordMovement(articleId, activeType, qty);
+        toast('Mouvement enregistré.');
+      } else {
+        const wentOffline = await recordMovementTolerant(articleId, activeType, qty);
+        toast(wentOffline ? 'Hors-ligne : vente enregistrée, en attente de synchronisation.' : 'Mouvement enregistré.');
+      }
+      backdrop.remove();
+    } catch (err) {
+      console.error(err);
+      toast("Erreur lors de l'enregistrement.");
+      submitBtn.disabled = false;
+    }
+  });
+}
+document.getElementById('fabMove').addEventListener('click', () => openMoveSheet(null));
+
+// ---------------------------------------------------------------------------
+// Article create/edit sheet
+// ---------------------------------------------------------------------------
+function openArticleSheet(id) {
+  if (!isGerant()) {
+    toast("Seul le gérant peut gérer les articles.");
+    return;
+  }
+  const existing = id ? articles[id] : null;
+  const backdrop = document.createElement('div');
+  backdrop.className = 'sheet-backdrop';
+  backdrop.innerHTML = `
+    <div class="sheet">
+      <div class="sheet-head"><h2>${existing ? 'Modifier l’article' : 'Nouvel article'}</h2><button class="sheet-close" id="closeArtSheet">✕</button></div>
+      <form id="articleForm">
+        <div class="field"><label for="artName">Nom</label><input id="artName" required value="${existing ? escapeHtml(existing.name) : ''}" placeholder="Ex : Écouteurs Bluetooth XR200"></div>
+        <div class="field"><label for="artCategory">Catégorie</label><input id="artCategory" value="${existing ? escapeHtml(existing.category || '') : ''}" placeholder="Ex : Écouteurs"></div>
+        <div class="field"><label for="artQty">Quantité en stock</label><input id="artQty" type="number" min="0" inputmode="numeric" value="${existing ? (existing.qty ?? 0) : 0}"></div>
+        <div class="field"><label for="artBuy">Prix d'achat (FCFA)</label><input id="artBuy" type="number" min="0" inputmode="numeric" value="${existing ? (existing.buy_price ?? '') : ''}"></div>
+        <div class="field"><label for="artSell">Prix de vente (FCFA)</label><input id="artSell" type="number" min="0" inputmode="numeric" value="${existing ? (existing.sell_price ?? '') : ''}"></div>
+        <div class="field"><label for="artThreshold">Seuil d'alerte stock bas</label><input id="artThreshold" type="number" min="0" inputmode="numeric" value="${existing ? (existing.threshold ?? 3) : 3}"></div>
+        <button type="submit" class="btn btn-primary btn-block">${existing ? 'Enregistrer' : 'Ajouter l’article'}</button>
+        ${existing ? '<button type="button" class="btn btn-ghost btn-block" id="deleteArtBtn">Supprimer l’article</button>' : ''}
+      </form>
+    </div>
+  `;
+  document.body.appendChild(backdrop);
+  backdrop.addEventListener('click', (e) => { if (e.target === backdrop) backdrop.remove(); });
+  document.getElementById('closeArtSheet').addEventListener('click', () => backdrop.remove());
+
+  document.getElementById('articleForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const payload = {
+      name: document.getElementById('artName').value.trim(),
+      category: document.getElementById('artCategory').value.trim(),
+      qty: parseInt(document.getElementById('artQty').value) || 0,
+      buy_price: parseFloat(document.getElementById('artBuy').value) || 0,
+      sell_price: parseFloat(document.getElementById('artSell').value) || 0,
+      threshold: parseInt(document.getElementById('artThreshold').value) || 0,
+    };
+    if (!payload.name) return;
+    try {
+      if (existing) {
+        const { error } = await supa.from('articles').update(payload).eq('id', id);
+        if (error) throw error;
+      } else {
+        const { error } = await supa.from('articles').insert(payload);
+        if (error) throw error;
+      }
+      backdrop.remove();
+      toast('Article enregistré.');
+    } catch (err) {
+      console.error(err);
+      toast("Erreur lors de l'enregistrement.");
+    }
+  });
+
+  if (existing) {
+    document.getElementById('deleteArtBtn').addEventListener('click', async () => {
+      try {
+        const { error } = await supa.from('articles').delete().eq('id', id);
+        if (error) throw error;
+        backdrop.remove();
+        toast('Article supprimé.');
+      } catch (err) {
+        console.error(err);
+        toast('Erreur lors de la suppression.');
+      }
+    });
+  }
+}
+document.getElementById('addArticleBtn').addEventListener('click', () => openArticleSheet(null));
+
+// ---------------------------------------------------------------------------
+// Export Excel
+// ---------------------------------------------------------------------------
+function buildWorkbook() {
+  const kindWord = { vente: 'Vente', reassort: 'Réassort', perte: 'Casse/Perte' };
+
+  const articleRows = Object.values(articles)
+    .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
+    .map(a => ({
+      'Article': a.name,
+      'Catégorie': a.category || '',
+      'Quantité en stock': a.qty ?? 0,
+      'Prix d\'achat (FCFA)': a.buy_price ?? 0,
+      'Prix de vente (FCFA)': a.sell_price ?? 0,
+      'Seuil alerte': a.threshold ?? 0,
+      'Valeur du stock (FCFA)': (a.qty ?? 0) * (a.buy_price ?? 0),
+    }));
+
+  const movementRows = movements
+    .slice()
+    .sort((a, b) => new Date(b.at) - new Date(a.at))
+    .map(m => {
+      const art = articles[m.article_id];
+      return {
+        'Date': m.at ? new Date(m.at).toLocaleString('fr-FR') : '',
+        'Article': art ? art.name : '(article supprimé)',
+        'Type': kindWord[m.type] || m.type,
+        'Quantité': m.qty,
+        'Par': m.by_name || 'inconnu',
+      };
+    });
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(articleRows), 'Articles');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(movementRows), 'Mouvements');
+  return wb;
+}
+
+document.getElementById('exportExcelBtn').addEventListener('click', () => {
+  try {
+    const wb = buildWorkbook();
+    const dateStr = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, `boutique-stock-${dateStr}.xlsx`);
+  } catch (err) {
+    console.error(err);
+    toast("Échec de l'export. Réessayez.");
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Import Excel
+// ---------------------------------------------------------------------------
+// Colonnes attendues dans le fichier (insensible à la casse, variantes tolérées) :
+// Nom / Article, Catégorie, Quantité, Prix d'achat, Prix de vente, Seuil alerte
+function pickCol(row, candidates) {
+  const keys = Object.keys(row);
+  for (const cand of candidates) {
+    const found = keys.find(k => k.trim().toLowerCase() === cand);
+    if (found !== undefined) return row[found];
+  }
+  return undefined;
+}
+function toNum(v, fallback) {
+  const n = parseFloat(v);
+  return isNaN(n) ? fallback : n;
+}
+function parseImportRows(rawRows) {
+  return rawRows.map(row => {
+    const name = String(pickCol(row, ['nom', 'article', 'nom de l\'article']) ?? '').trim();
+    return {
+      name,
+      category: String(pickCol(row, ['catégorie', 'categorie']) ?? '').trim(),
+      qty: toNum(pickCol(row, ['quantité', 'quantite', 'quantité en stock', 'qty']), 0),
+      buy_price: toNum(pickCol(row, ['prix d\'achat', 'prix d\'achat (fcfa)', 'prix achat']), 0),
+      sell_price: toNum(pickCol(row, ['prix de vente', 'prix de vente (fcfa)', 'prix vente']), 0),
+      threshold: toNum(pickCol(row, ['seuil alerte', 'seuil', 'seuil d\'alerte stock bas']), 3),
+    };
+  }).filter(r => r.name);
+}
+
+function openImportSheet(parsedRows) {
+  const byNameLower = {};
+  Object.entries(articles).forEach(([id, a]) => { byNameLower[a.name.trim().toLowerCase()] = id; });
+
+  const plan = parsedRows.map(r => {
+    const existingId = byNameLower[r.name.toLowerCase()];
+    return { ...r, existingId, action: existingId ? 'update' : 'new' };
+  });
+
+  const newCount = plan.filter(p => p.action === 'new').length;
+  const updateCount = plan.filter(p => p.action === 'update').length;
+
+  const backdrop = document.createElement('div');
+  backdrop.className = 'sheet-backdrop';
+  backdrop.innerHTML = `
+    <div class="sheet">
+      <div class="sheet-head"><h2>Importer ${plan.length} article(s)</h2><button class="sheet-close" id="closeImportSheet">✕</button></div>
+      <div class="import-summary">${newCount} nouveau(x), ${updateCount} à mettre à jour (quantité, prix et seuil remplacés ; un réassort sera enregistré).</div>
+      <div class="import-preview">
+        ${plan.map(p => `
+          <div class="import-row">
+            <span class="iname">${escapeHtml(p.name)}</span>
+            <span class="ibadge ${p.action}">${p.action === 'new' ? 'Nouveau' : 'Maj'}</span>
+          </div>
+        `).join('')}
+      </div>
+      <button type="button" class="btn btn-primary btn-block" id="confirmImportBtn">Confirmer l'import</button>
+    </div>
+  `;
+  document.body.appendChild(backdrop);
+  backdrop.addEventListener('click', (e) => { if (e.target === backdrop) backdrop.remove(); });
+  document.getElementById('closeImportSheet').addEventListener('click', () => backdrop.remove());
+
+  document.getElementById('confirmImportBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('confirmImportBtn');
+    btn.disabled = true;
+    btn.textContent = 'Import en cours…';
+    let okCount = 0, failCount = 0;
+    for (const p of plan) {
+      try {
+        if (p.action === 'update') {
+          const { error } = await supa.from('articles').update({
+            category: p.category, qty: p.qty, buy_price: p.buy_price,
+            sell_price: p.sell_price, threshold: p.threshold,
+          }).eq('id', p.existingId);
+          if (error) throw error;
+          if (p.qty > 0) await recordMovement(p.existingId, 'reassort', p.qty);
+        } else {
+          const { data, error } = await supa.from('articles').insert({
+            name: p.name, category: p.category, qty: p.qty,
+            buy_price: p.buy_price, sell_price: p.sell_price, threshold: p.threshold,
+          }).select('id').single();
+          if (error) throw error;
+          if (p.qty > 0 && data?.id) await recordMovement(data.id, 'reassort', p.qty);
+        }
+        okCount++;
+      } catch (err) {
+        console.error(err);
+        failCount++;
+      }
+    }
+    backdrop.remove();
+    toast(failCount === 0 ? `${okCount} article(s) importé(s).` : `${okCount} importé(s), ${failCount} échec(s).`);
+  });
+}
+
+document.getElementById('importExcelBtn').addEventListener('click', () => {
+  document.getElementById('importExcelInput').click();
+});
+document.getElementById('importExcelInput').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  try {
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, { type: 'array' });
+    const sheetName = wb.SheetNames[0];
+    const rawRows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { defval: '' });
+    const parsed = parseImportRows(rawRows);
+    if (parsed.length === 0) {
+      toast("Aucune ligne valide trouvée (vérifiez les colonnes : Nom, Catégorie, Quantité, Prix d'achat, Prix de vente, Seuil alerte).");
+      return;
+    }
+    openImportSheet(parsed);
+  } catch (err) {
+    console.error(err);
+    toast("Impossible de lire ce fichier. Vérifiez qu'il s'agit bien d'un fichier Excel.");
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Filters wiring
+// ---------------------------------------------------------------------------
+document.getElementById('searchInput').addEventListener('input', renderArticleList);
+document.getElementById('categoryFilter').addEventListener('change', renderArticleList);
+document.getElementById('historyFilter').addEventListener('change', renderHistory);
+
+// ---------------------------------------------------------------------------
+// Data layer: Supabase
+// ---------------------------------------------------------------------------
+async function recordMovement(articleId, type, qty) {
+  // Passe par la fonction sécurisée côté serveur : elle revérifie le rôle,
+  // met à jour le stock et insère le mouvement de façon atomique.
+  const { error } = await supa.rpc('record_movement', {
+    p_article_id: articleId,
+    p_type: type,
+    p_qty: qty,
+  });
+  if (error) throw error;
+  markActivity();
+}
+
+// ---------------------------------------------------------------------------
+// Vente / Perte tolérantes au hors-ligne
+// ---------------------------------------------------------------------------
+// Tente l'enregistrement en direct ; si le réseau est indisponible (ou l'appel
+// échoue pour une raison réseau), le mouvement est mis en file d'attente locale
+// et appliqué à l'affichage de façon optimiste (le stock réel sera recalé dès
+// la synchronisation). Retourne true si le mouvement est parti en hors-ligne.
+async function recordMovementTolerant(articleId, type, qty) {
+  if (navigator.onLine) {
+    try {
+      await recordMovement(articleId, type, qty);
+      return false;
+    } catch (err) {
+      // Si l'erreur ne ressemble pas à un problème réseau (ex: refusé par le serveur), on la relance.
+      if (!isLikelyNetworkError(err)) throw err;
+    }
+  }
+  await queueOfflineMovement(articleId, type, qty);
+  return true;
+}
+
+function isLikelyNetworkError(err) {
+  const msg = String(err?.message || err || '').toLowerCase();
+  return !navigator.onLine || msg.includes('fetch') || msg.includes('network') || msg.includes('failed to fetch');
+}
+
+async function queueOfflineMovement(articleId, type, qty) {
+  markActivity();
+  const entry = {
+    localId: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    article_id: articleId,
+    type,
+    qty,
+    by_name: currentProfile?.display_name || currentProfile?.email || 'inconnu',
+    created_at: new Date().toISOString(),
+  };
+  await addPendingMovement(entry);
+
+  // Mise à jour optimiste de l'affichage local (stock + liste des mouvements),
+  // sans attendre la synchronisation.
+  const a = articles[articleId];
+  if (a) {
+    a.qty = (a.qty ?? 0) - qty; // vente/perte retirent toujours du stock
+  }
+  movements.unshift({
+    id: 'pending-' + entry.localId,
+    article_id: articleId,
+    type,
+    qty,
+    by_name: entry.by_name,
+    at: entry.created_at,
+    pending: true,
+  });
+  updatePendingBadge();
+  renderAll();
+}
+
+async function syncPendingMovements() {
+  if (syncInProgress || !navigator.onLine) return;
+  syncInProgress = true;
+  try {
+    const pending = await getPendingMovements();
+    if (pending.length === 0) { updatePendingBadge(); return; }
+    pending.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    for (const entry of pending) {
+      try {
+        await recordMovement(entry.article_id, entry.type, entry.qty);
+        await removePendingMovement(entry.localId);
+      } catch (err) {
+        console.error('Échec synchronisation mouvement en attente:', err);
+        // On s'arrête ici : on réessaiera au prochain déclenchement (reconnexion suivante),
+        // pour garder l'ordre des mouvements.
+        break;
+      }
+    }
+    // Recharge l'état réel depuis le serveur (corrige toute estimation optimiste,
+    // y compris un stock négatif resté affiché le temps de la synchro).
+    await loadArticles();
+    await loadMovements();
+  } finally {
+    syncInProgress = false;
+    updatePendingBadge();
+  }
+}
+
+function updatePendingBadge() {
+  getPendingMovements().then((pending) => {
+    pendingCount = pending.length;
+    const el = document.getElementById('pendingBadge');
+    if (el) {
+      el.hidden = pendingCount === 0;
+      el.textContent = pendingCount === 1 ? '1 en attente' : `${pendingCount} en attente`;
+    }
+  }).catch(() => {});
+}
+
+function updateOnlineStatus() {
+  const pill = document.getElementById('offlineStatus');
+  if (!pill) return;
+  pill.hidden = navigator.onLine;
+}
+
+window.addEventListener('online', () => { updateOnlineStatus(); syncPendingMovements(); });
+window.addEventListener('offline', () => { updateOnlineStatus(); });
+
+const DATA_CACHE_KEY = 'boutique-stock-data-cache';
+
+function cacheData() {
+  try {
+    localStorage.setItem(DATA_CACHE_KEY, JSON.stringify({ articles, movements }));
+  } catch (err) { /* stockage indisponible : tant pis, pas bloquant */ }
+}
+
+function readCachedData() {
+  try {
+    const raw = localStorage.getItem(DATA_CACHE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (err) {
+    return null;
+  }
+}
+
+async function loadArticles() {
+  const { data, error } = await supa.from('articles').select('*').order('name');
+  if (error) {
+    console.error(error);
+    if (!navigator.onLine || isLikelyNetworkError(error)) {
+      const cached = readCachedData();
+      if (cached?.articles && Object.keys(articles).length === 0) {
+        articles = cached.articles;
+        await reapplyPendingMovements();
+        renderAll();
+      }
+    }
+    return;
+  }
+  articles = {};
+  (data || []).forEach(row => {
+    articles[row.id] = {
+      name: row.name, category: row.category, qty: row.qty,
+      buy_price: row.buy_price, sell_price: row.sell_price, threshold: row.threshold,
+    };
+  });
+  await reapplyPendingMovements();
+  renderAll();
+  cacheData();
+}
+
+async function loadMovements() {
+  const { data, error } = await supa.from('movements').select('*').order('at', { ascending: false }).limit(200);
+  if (error) {
+    console.error(error);
+    if (!navigator.onLine || isLikelyNetworkError(error)) {
+      const cached = readCachedData();
+      if (cached?.movements && movements.length === 0) {
+        movements = cached.movements;
+        await reapplyPendingMovements();
+        renderAll();
+      }
+    }
+    return;
+  }
+  movements = data || [];
+  await reapplyPendingMovements();
+  renderAll();
+  cacheData();
+}
+
+// Réapplique par-dessus l'état serveur les mouvements encore en file d'attente
+// locale (pas encore synchronisés), pour que l'affichage reste cohérent même
+// si un chargement serveur intervient pendant que l'app est hors-ligne.
+async function reapplyPendingMovements() {
+  let pending = [];
+  try {
+    pending = await getPendingMovements();
+  } catch (err) {
+    console.error(err);
+    return;
+  }
+  if (pending.length === 0) return;
+  pending.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+  for (const entry of pending) {
+    const a = articles[entry.article_id];
+    if (a) a.qty = (a.qty ?? 0) - entry.qty;
+    const alreadyShown = movements.some((m) => m.id === 'pending-' + entry.localId);
+    if (!alreadyShown) {
+      movements.unshift({
+        id: 'pending-' + entry.localId,
+        article_id: entry.article_id,
+        type: entry.type,
+        qty: entry.qty,
+        by_name: entry.by_name,
+        at: entry.created_at,
+        pending: true,
+      });
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Changement de mot de passe
+// ---------------------------------------------------------------------------
+function openPasswordSheet() {
+  const backdrop = document.createElement('div');
+  backdrop.className = 'sheet-backdrop';
+  backdrop.innerHTML = `
+    <div class="sheet">
+      <div class="sheet-head"><h2>Changer mon mot de passe</h2><button class="sheet-close" id="closePwdSheet">✕</button></div>
+      <form id="pwdForm">
+        <div class="field">
+          <label for="pwdNew">Nouveau mot de passe</label>
+          <input id="pwdNew" type="password" required minlength="6" autocomplete="new-password">
+        </div>
+        <div class="field" style="margin-top:10px">
+          <label for="pwdConfirm">Confirmer le mot de passe</label>
+          <input id="pwdConfirm" type="password" required minlength="6" autocomplete="new-password">
+        </div>
+        <p class="login-error" id="pwdError"></p>
+        <button type="submit" class="btn btn-primary btn-block" style="margin-top:14px" id="pwdSubmitBtn">Enregistrer</button>
+      </form>
+    </div>
+  `;
+  document.body.appendChild(backdrop);
+  backdrop.addEventListener('click', (e) => { if (e.target === backdrop) backdrop.remove(); });
+  document.getElementById('closePwdSheet').addEventListener('click', () => backdrop.remove());
+
+  document.getElementById('pwdForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const pwd = document.getElementById('pwdNew').value;
+    const confirm = document.getElementById('pwdConfirm').value;
+    const errEl = document.getElementById('pwdError');
+    const btn = document.getElementById('pwdSubmitBtn');
+    errEl.textContent = '';
+    if (pwd !== confirm) {
+      errEl.textContent = 'Les deux mots de passe ne correspondent pas.';
+      return;
+    }
+    if (pwd.length < 6) {
+      errEl.textContent = 'Le mot de passe doit contenir au moins 6 caractères.';
+      return;
+    }
+    btn.disabled = true;
+    try {
+      const { error } = await supa.auth.updateUser({ password: pwd });
+      if (error) throw error;
+      toast('Mot de passe mis à jour.');
+      backdrop.remove();
+    } catch (err) {
+      console.error(err);
+      errEl.textContent = "Échec de la mise à jour. Réessayez.";
+    } finally {
+      btn.disabled = false;
+    }
+  });
+}
+
+document.getElementById('changePasswordBtn').addEventListener('click', openPasswordSheet);
+
+// ---------------------------------------------------------------------------
+// Authentification
+// ---------------------------------------------------------------------------
+function showLogin() {
+  document.getElementById('loginScreen').hidden = false;
+  document.getElementById('signupScreen').hidden = true;
+  document.getElementById('app').hidden = true;
+  document.getElementById('fabMove').hidden = true;
+  document.getElementById('whoLabel').textContent = 'Non connecté';
+  document.getElementById('whoDot').classList.add('off');
+  document.getElementById('logoutBtn').hidden = true;
+  document.getElementById('changePasswordBtn').hidden = true;
+  document.querySelector('.app-fixed-top nav.tabs').hidden = true;
+  document.getElementById('fixedPanel-stock').hidden = true;
+  document.getElementById('fixedPanel-historique').hidden = true;
+  document.getElementById('fixedPanel-articles').hidden = true;
+  document.getElementById('offlineStatus').hidden = true;
+  document.getElementById('pendingBadge').hidden = true;
+  document.getElementById('fixedTop').hidden = false;
+}
+
+function showSignup() {
+  document.getElementById('loginScreen').hidden = true;
+  document.getElementById('signupScreen').hidden = false;
+  document.getElementById('app').hidden = true;
+  document.getElementById('fabMove').hidden = true;
+  document.getElementById('whoLabel').textContent = 'Non connecté';
+  document.getElementById('whoDot').classList.add('off');
+  document.getElementById('logoutBtn').hidden = true;
+  document.getElementById('changePasswordBtn').hidden = true;
+  document.querySelector('.app-fixed-top nav.tabs').hidden = true;
+  document.getElementById('fixedPanel-stock').hidden = true;
+  document.getElementById('fixedPanel-historique').hidden = true;
+  document.getElementById('fixedPanel-articles').hidden = true;
+  document.getElementById('offlineStatus').hidden = true;
+  document.getElementById('pendingBadge').hidden = true;
+  document.getElementById('fixedTop').hidden = false;
+}
+
+document.getElementById('showSignupBtn').addEventListener('click', showSignup);
+document.getElementById('showLoginBtn').addEventListener('click', showLogin);
+
+document.getElementById('signupForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const shopName = document.getElementById('signupShopName').value.trim();
+  const email = document.getElementById('signupEmail').value.trim();
+  const password = document.getElementById('signupPassword').value;
+  const btn = document.getElementById('signupSubmitBtn');
+  const errEl = document.getElementById('signupError');
+  errEl.textContent = '';
+  btn.disabled = true;
+  try {
+    if (!navigator.onLine) {
+      throw new Error('La création d\'une boutique nécessite une connexion internet.');
+    }
+    const { data, error } = await supa.auth.signUp({ email, password });
+    if (error) throw error;
+    // Si la confirmation d'email est désactivée côté Supabase, signUp()
+    // retourne déjà une session active et on peut créer la boutique tout
+    // de suite. Sinon, l'utilisateur devra confirmer puis se connecter —
+    // la création de la boutique se fera à la première connexion réussie
+    // (voir loadProfileAndEnter / enterAppWithProfile ci-dessous).
+    if (data.session) {
+      const { error: shopError } = await supa.rpc('create_shop_and_owner', { p_shop_name: shopName });
+      if (shopError) throw shopError;
+      await loadProfileAndEnter(data.user.id);
+    } else {
+      pendingShopName = shopName;
+      errEl.textContent = '';
+      toast('Compte créé. Vérifiez votre email pour confirmer, puis connectez-vous.');
+      showLogin();
+    }
+  } catch (err) {
+    console.error(err);
+    errEl.textContent = err.message && err.message.includes('already registered')
+      ? 'Un compte existe déjà avec cet email.'
+      : (err.message || 'Impossible de créer la boutique.');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+function showApp() {
+  document.getElementById('loginScreen').hidden = true;
+  document.getElementById('signupScreen').hidden = true;
+  document.getElementById('app').hidden = false;
+  document.getElementById('logoutBtn').hidden = false;
+  document.getElementById('changePasswordBtn').hidden = false;
+  document.querySelector('.app-fixed-top nav.tabs').hidden = false;
+  ['dashboard', 'stock', 'historique', 'articles'].forEach(t => {
+    document.getElementById('fixedPanel-' + t).hidden = (t !== currentTab);
+  });
+  document.getElementById('fixedTop').hidden = false;
+}
+
+// ---------------------------------------------------------------------------
+// Expiration de session après inactivité (limite le risque en cas de téléphone
+// perdu/volé encore connecté : au-delà de 7 jours sans utilisation, on redemande
+// le mot de passe, même si le token de session Supabase est encore valide).
+// ---------------------------------------------------------------------------
+const LAST_ACTIVITY_KEY = 'boutique-stock-last-activity';
+const INACTIVITY_LIMIT_MS = 7 * 24 * 60 * 60 * 1000; // 7 jours
+
+function markActivity() {
+  try { localStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now())); } catch (err) { /* non bloquant */ }
+}
+
+function isSessionExpiredByInactivity() {
+  try {
+    const last = parseInt(localStorage.getItem(LAST_ACTIVITY_KEY), 10);
+    if (!last) return false; // pas d'historique : on laisse passer (première fois)
+    return (Date.now() - last) > INACTIVITY_LIMIT_MS;
+  } catch (err) {
+    return false;
+  }
+}
+
+const PROFILE_CACHE_KEY = 'boutique-stock-profile-cache';
+
+function cacheProfile(userId, profile) {
+  try {
+    localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify({ userId, profile }));
+  } catch (err) { /* stockage indisponible : tant pis, pas bloquant */ }
+}
+
+function readCachedProfile(userId) {
+  try {
+    const raw = localStorage.getItem(PROFILE_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed.userId !== userId) return null;
+    return parsed.profile;
+  } catch (err) {
+    return null;
+  }
+}
+
+async function loadProfileAndEnter(userId) {
+  let { data, error } = await supa.from('profiles').select('*').eq('id', userId).single();
+
+  if (error || !data) {
+    // Hors-ligne (ou requête impossible pour raison réseau) : on retombe sur le
+    // profil mis en cache lors d'une précédente connexion réussie, plutôt que
+    // de déconnecter le vendeur — une coupure réseau n'est pas une erreur de compte.
+    if (!navigator.onLine || isLikelyNetworkError(error)) {
+      const cached = readCachedProfile(userId);
+      if (cached) {
+        currentProfile = cached;
+        enterAppWithProfile();
+        toast('Hors-ligne : connecté avec les dernières informations enregistrées.');
+        return;
+      }
+      // Pas de réseau et aucun profil en cache (toute première connexion) : impossible de continuer.
+      document.getElementById('loginError').textContent = 'Pas de connexion internet. La première connexion nécessite une connexion active.';
+      showLogin();
+      return;
+    }
+    // En ligne mais vraie erreur (compte sans profil, etc.) : là on déconnecte.
+    console.error(error);
+    document.getElementById('loginError').textContent = "Votre compte n'a pas de profil associé. Contactez le gérant.";
+    await supa.auth.signOut();
+    showLogin();
+    return;
+  }
+
+  // Première connexion après confirmation d'email suite à une inscription :
+  // le profil existe (créé par le trigger côté serveur) mais n'a pas encore
+  // de boutique — on la crée maintenant avec le nom choisi au moment du signup.
+  if (!data.shop_id && pendingShopName) {
+    const shopNameToUse = pendingShopName;
+    pendingShopName = null;
+    try {
+      const { error: shopError } = await supa.rpc('create_shop_and_owner', { p_shop_name: shopNameToUse });
+      if (shopError) throw shopError;
+      const { data: refreshed } = await supa.from('profiles').select('*').eq('id', userId).single();
+      if (refreshed) data = refreshed;
+    } catch (err) {
+      console.error(err);
+      toast("Compte connecté, mais la création de la boutique a échoué. Réessayez ou contactez le support.");
+    }
+  }
+
+  currentProfile = data;
+  cacheProfile(userId, data);
+  enterAppWithProfile();
+}
+
+function enterAppWithProfile() {
+  markActivity();
+  showApp();
+  document.getElementById('whoDot').classList.remove('off');
+  applyRoleToUI();
+  document.getElementById('fabMove').hidden = (currentTab !== 'stock');
+  subscribeRealtime();
+  loadArticles();
+  loadMovements();
+  updateOnlineStatus();
+  updatePendingBadge();
+  syncPendingMovements();
+}
+
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const btn = document.getElementById('loginSubmitBtn');
+  const errEl = document.getElementById('loginError');
+  errEl.textContent = '';
+  btn.disabled = true;
+  try {
+    const { data, error } = await supa.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    await loadProfileAndEnter(data.user.id);
+  } catch (err) {
+    console.error(err);
+    errEl.textContent = 'Email ou mot de passe incorrect.';
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+document.getElementById('logoutBtn').addEventListener('click', async () => {
+  unsubscribeRealtime();
+  await supa.auth.signOut();
+  currentProfile = null;
+  articles = {};
+  movements = [];
+  showLogin();
+});
+
+function subscribeRealtime() {
+  if (articlesChannel) return; // déjà abonné
+  articlesChannel = supa.channel('public:articles')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'articles' }, loadArticles)
+    .subscribe();
+  movementsChannel = supa.channel('public:movements')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'movements' }, loadMovements)
+    .subscribe();
+}
+
+function unsubscribeRealtime() {
+  if (articlesChannel) { supa.removeChannel(articlesChannel); articlesChannel = null; }
+  if (movementsChannel) { supa.removeChannel(movementsChannel); movementsChannel = null; }
+}
+
+async function start() {
+  showLogin(); // état par défaut pendant qu'on vérifie la session
+  if (isSessionExpiredByInactivity()) {
+    // Session trop ancienne sans activité : on force une reconnexion par mot de passe,
+    // même si le token local est encore techniquement valide (protection en cas de
+    // téléphone perdu ou volé resté connecté).
+    await supa.auth.signOut();
+    document.getElementById('loginError').textContent = 'Session expirée après une longue inactivité. Reconnectez-vous.';
+    return;
+  }
+  const { data } = await supa.auth.getSession();
+  if (data.session) {
+    await loadProfileAndEnter(data.session.user.id);
+  }
+}
+
+start();
+
+// ---------------------------------------------------------------------------
+// PWA : enregistrement du service worker
+// ---------------------------------------------------------------------------
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('service-worker.js').catch((err) => {
+      console.error('Échec enregistrement service worker:', err);
+    });
+  });
+}
+</script>
+</body>
+</html>

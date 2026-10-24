@@ -1,0 +1,13 @@
+{
+  "name": "erp-boutique",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ERP Boutique — application de bureau multi-boutiques (Tauri)",
+  "scripts": {
+    "dev": "tauri dev",
+    "build": "tauri build"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2"
+  }
+}

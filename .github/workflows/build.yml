@@ -1,0 +1,58 @@
+name: Build ERP Boutique (desktop)
+
+# Se déclenche :
+#  - automatiquement à chaque push sur main
+#  - manuellement depuis l'onglet "Actions" de GitHub (bouton "Run workflow")
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows-latest
+            label: windows
+          - platform: macos-latest
+            label: macos
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+
+      - name: Installer Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Installer Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Générer config.js à partir des secrets du dépôt
+        shell: bash
+        run: |
+          cat > dist/config.js << EOF
+          window.SUPABASE_URL = "${{ secrets.SUPABASE_URL }}";
+          window.SUPABASE_ANON_KEY = "${{ secrets.SUPABASE_ANON_KEY }}";
+          EOF
+
+      - name: Installer les dépendances JS (CLI Tauri)
+        run: npm install
+
+      - name: Builder l'application
+        run: npm run build
+
+      - name: Publier les fichiers générés (installeurs)
+        uses: actions/upload-artifact@v4
+        with:
+          name: erp-boutique-${{ matrix.label }}
+          path: |
+            src-tauri/target/release/bundle/**/*.msi
+            src-tauri/target/release/bundle/**/*.exe
+            src-tauri/target/release/bundle/**/*.dmg
+          if-no-files-found: warn

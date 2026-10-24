@@ -1,0 +1,13 @@
+# Clés Supabase locales — jamais commitées, voir dist/config.example.js
+dist/config.js
+
+# Rust / Tauri
+src-tauri/target/
+src-tauri/gen/
+
+# Node (si jamais des dépendances JS sont ajoutées plus tard)
+node_modules/
+
+# Fichiers système
+.DS_Store
+Thumbs.db
