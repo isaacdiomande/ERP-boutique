@@ -459,7 +459,10 @@ let syncInProgress = false;
 let pendingShopName = null; // nom choisi à l'inscription, en attente de confirmation d'email
 
 function isGerant() {
-  return currentProfile && currentProfile.role === 'gerant';
+  // 'owner' (propriétaire de la boutique) a les mêmes droits que 'gerant'
+  // dans l'app actuelle — distinction fine entre les deux réservée aux
+  // futurs modules (phase 2+ du cahier des charges).
+  return currentProfile && (currentProfile.role === 'gerant' || currentProfile.role === 'owner');
 }
 
 function toast(msg) {
@@ -704,7 +707,8 @@ function applyRoleToUI() {
     document.getElementById('fixedPanel-historique').hidden = true;
     document.getElementById('fixedPanel-articles').hidden = true;
   }
-  const label = gerant ? 'Gérant' : 'Vendeur';
+  const roleLabels = { owner: 'Propriétaire', gerant: 'Gérant', comptable: 'Comptable', vendeur: 'Vendeur', livreur: 'Livreur' };
+  const label = roleLabels[currentProfile.role] || (gerant ? 'Gérant' : 'Vendeur');
   const cls = gerant ? 'gerant' : 'vendeur';
   document.getElementById('whoLabel').innerHTML = `${escapeHtml(currentProfile.display_name || currentProfile.email)} <span class="role-badge ${cls}">${label}</span>`;
 }
