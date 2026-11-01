@@ -46,7 +46,32 @@ end $$;
 -- 3. Ajout de shop_id + role aux tables existantes
 -- ----------------------------------------------------------------------------
 alter table public.profiles  add column if not exists shop_id uuid references public.shops(id) on delete cascade;
-alter table public.profiles  add column if not exists role    public.shop_role not null default 'vendeur';
+
+-- `role` peut déjà exister en text (ancienne version web, avec une contrainte
+-- CHECK limitée à 'gerant'/'vendeur' — à retirer manuellement avant ce script
+-- si c'est le cas : alter table public.profiles drop constraint <son_nom>;).
+-- On l'ajoute si absente, sinon on convertit son type existant vers l'enum.
+do $$
+begin
+  if not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'profiles' and column_name = 'role'
+  ) then
+    alter table public.profiles add column role public.shop_role not null default 'vendeur';
+  elsif (
+    select data_type from information_schema.columns
+    where table_schema = 'public' and table_name = 'profiles' and column_name = 'role'
+  ) <> 'USER-DEFINED' then
+    alter table public.profiles alter column role drop default;
+    alter table public.profiles
+      alter column role type public.shop_role
+      using (case when role in ('owner','gerant','comptable','vendeur','livreur')
+                  then role::public.shop_role
+                  else 'vendeur'::public.shop_role end);
+    alter table public.profiles alter column role set default 'vendeur';
+    alter table public.profiles alter column role set not null;
+  end if;
+end $$;
 
 alter table public.articles  add column if not exists shop_id uuid references public.shops(id) on delete cascade;
 alter table public.movements add column if not exists shop_id uuid references public.shops(id) on delete cascade;
@@ -103,7 +128,7 @@ as $$
   select shop_id from public.profiles where id = auth.uid();
 $$;
 
-create or replace function public.current_role()
+create or replace function public.current_shop_role()
 returns public.shop_role
 language sql
 security definer
@@ -153,7 +178,7 @@ drop policy if exists articles_delete_same_shop on public.articles;
 create policy articles_delete_same_shop on public.articles
   for delete using (
     shop_id = public.current_shop_id()
-    and public.current_role() in ('owner', 'gerant')
+    and public.current_shop_role() in ('owner', 'gerant')
   );
 
 -- movements : lecture limitée à la boutique ; écriture directe interdite
@@ -179,7 +204,7 @@ set search_path = public
 as $$
 declare
   v_shop_id        uuid := public.current_shop_id();
-  v_role           public.shop_role := public.current_role();
+  v_role           public.shop_role := public.current_shop_role();
   v_article_shop   uuid;
 begin
   if v_shop_id is null then
