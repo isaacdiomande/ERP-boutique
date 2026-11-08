@@ -749,7 +749,10 @@ function openCustomerSheet(id) {
         const { error } = await supa.from('customers').update(payload).eq('id', id);
         if (error) throw error;
       } else {
-        const { error } = await supa.from('customers').insert(payload);
+        // shop_id est obligatoire en base : on le fournit explicitement à la
+        // création (RLS vérifiera quand même qu'il correspond bien à la
+        // boutique de l'utilisateur connecté).
+        const { error } = await supa.from('customers').insert({ ...payload, shop_id: currentProfile.shop_id });
         if (error) throw error;
       }
       backdrop.remove();
@@ -757,7 +760,7 @@ function openCustomerSheet(id) {
       await loadCustomers();
     } catch (err) {
       console.error(err);
-      toast("Erreur lors de l'enregistrement.");
+      toast(err.message ? `Erreur : ${err.message}` : "Erreur lors de l'enregistrement.");
     }
   });
 
