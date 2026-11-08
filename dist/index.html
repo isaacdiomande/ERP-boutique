@@ -167,6 +167,8 @@ section[hidden] { display: none !important; }
 .article-row .meta { font-size: 0.75rem; color: var(--ink-dim); }
 .article-row .qty { flex: none; text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-weight: 700; font-size: 1rem; min-width: 44px; }
 .article-row .qty .unit { font-size: 0.65rem; font-weight: 500; color: var(--ink-dim); display: block; font-family: var(--font-body); }
+.article-row .qty.bad { color: var(--bad); }
+.article-row .qty.good { color: var(--good); font-size: 0.8rem; }
 .stock-pill { flex: none; width: 8px; height: 8px; border-radius: 50%; }
 .stock-pill.ok { background: var(--good); }
 .stock-pill.low { background: var(--warn); }
@@ -277,6 +279,7 @@ form { display: flex; flex-direction: column; gap: 14px; }
     <button class="tab-btn active" data-tab="dashboard">Tableau de bord</button>
     <button class="tab-btn" data-tab="stock">Stock</button>
     <button class="tab-btn" data-tab="historique">Historique</button>
+    <button class="tab-btn" data-tab="clients" id="clientsTabBtn">Clients</button>
     <button class="tab-btn" data-tab="articles" id="articlesTabBtn">Articles</button>
   </nav>
 
@@ -299,6 +302,13 @@ form { display: flex; flex-direction: column; gap: 14px; }
         <option value="reassort">Réassorts</option>
         <option value="perte">Casse / Perte</option>
       </select>
+    </div>
+  </div>
+
+  <div class="fixed-tab-panel" id="fixedPanel-clients" hidden>
+    <button class="btn btn-ghost btn-block" id="addCustomerBtn">+ Ajouter un client</button>
+    <div class="searchbar">
+      <input type="search" id="customerSearchInput" placeholder="Rechercher un client…">
     </div>
   </div>
 
@@ -354,6 +364,10 @@ form { display: flex; flex-direction: column; gap: 14px; }
 
   <section id="tab-historique" hidden>
     <div class="history-list" id="historyList"></div>
+  </section>
+
+  <section id="tab-clients" hidden>
+    <div class="article-list" id="customerList"></div>
   </section>
 
   <section id="tab-articles" hidden>
@@ -450,10 +464,12 @@ function timeAgo(ts) {
 // ---------------------------------------------------------------------------
 let articles = {};   // id -> {name, category, qty, buy_price, sell_price, threshold}
 let movements = [];  // [{id, article_id, type, qty, by_name, at}]
+let customers = {};  // id -> {name, phone, email, address, segment, credit_limit, credit_balance, notes}
 let currentTab = 'dashboard';
 let currentProfile = null; // {role, display_name, email}
 let articlesChannel = null;
 let movementsChannel = null;
+let customersChannel = null;
 let pendingCount = 0; // nombre de mouvements en attente de synchronisation (hors-ligne)
 let syncInProgress = false;
 let pendingShopName = null; // nom choisi à l'inscription, en attente de confirmation d'email
@@ -496,7 +512,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     currentTab = btn.dataset.tab;
-    ['dashboard', 'stock', 'historique', 'articles'].forEach(t => {
+    ['dashboard', 'stock', 'historique', 'clients', 'articles'].forEach(t => {
       document.getElementById('tab-' + t).hidden = (t !== currentTab);
       document.getElementById('fixedPanel-' + t).hidden = (t !== currentTab);
     });
@@ -623,8 +639,160 @@ function renderAll() {
   renderArticleList();
   renderHistory();
   renderArticlesManage();
+  renderCustomers();
   renderDashboard();
 }
+
+// ---------------------------------------------------------------------------
+// Clients (module 3 — fiche, compte crédit, historique)
+// ---------------------------------------------------------------------------
+function renderCustomers() {
+  const host = document.getElementById('customerList');
+  if (!host) return;
+  const search = (document.getElementById('customerSearchInput')?.value || '').trim().toLowerCase();
+  let list = Object.entries(customers).sort((a, b) => a[1].name.localeCompare(b[1].name, 'fr'));
+  if (search) {
+    list = list.filter(([, c]) =>
+      c.name.toLowerCase().includes(search) ||
+      (c.phone || '').toLowerCase().includes(search)
+    );
+  }
+  if (list.length === 0) {
+    host.innerHTML = `<div class="empty-state">${search ? 'Aucun client trouvé.' : 'Aucun client. Ajoutez le premier ci-dessus.'}</div>`;
+    return;
+  }
+  host.innerHTML = list.map(([id, c]) => {
+    const due = c.credit_balance || 0;
+    const dueClass = due > 0 ? 'bad' : 'good';
+    return `
+    <div class="article-row" data-id="${id}">
+      <div class="info">
+        <div class="name">${escapeHtml(c.name)}</div>
+        <div class="meta">${escapeHtml(c.phone || 'Pas de téléphone')}${c.segment ? ' · ' + escapeHtml(c.segment) : ''}</div>
+      </div>
+      <div class="qty ${dueClass}">${due > 0 ? fmtFCFA(due) : 'À jour'}${due > 0 ? '<span class="unit">dû</span>' : ''}</div>
+    </div>`;
+  }).join('');
+  host.querySelectorAll('.article-row').forEach(row => {
+    row.addEventListener('click', () => openCustomerSheet(row.dataset.id));
+  });
+}
+document.getElementById('customerSearchInput')?.addEventListener('input', renderCustomers);
+
+function customerHistory(customerId) {
+  return movements
+    .filter(m => m.customer_id === customerId)
+    .slice()
+    .sort((a, b) => new Date(b.at) - new Date(a.at))
+    .slice(0, 20);
+}
+
+function openCustomerSheet(id) {
+  const existing = id ? customers[id] : null;
+  const backdrop = document.createElement('div');
+  backdrop.className = 'sheet-backdrop';
+  const history = existing ? customerHistory(id) : [];
+  const typeWord = { vente: 'Vente', reassort: 'Réassort', perte: 'Casse/Perte' };
+  backdrop.innerHTML = `
+    <div class="sheet">
+      <div class="sheet-head"><h2>${existing ? 'Modifier le client' : 'Nouveau client'}</h2><button class="sheet-close" id="closeCustSheet">✕</button></div>
+      <form id="customerForm">
+        <div class="field"><label for="custName">Nom</label><input id="custName" required value="${existing ? escapeHtml(existing.name) : ''}" placeholder="Ex : Mme Koné"></div>
+        <div class="field"><label for="custPhone">Téléphone</label><input id="custPhone" value="${existing ? escapeHtml(existing.phone || '') : ''}" placeholder="Ex : 07 00 00 00 00"></div>
+        <div class="field"><label for="custEmail">Email</label><input id="custEmail" type="email" value="${existing ? escapeHtml(existing.email || '') : ''}"></div>
+        <div class="field"><label for="custAddress">Adresse</label><input id="custAddress" value="${existing ? escapeHtml(existing.address || '') : ''}"></div>
+        <div class="field"><label for="custSegment">Segment</label><input id="custSegment" value="${existing ? escapeHtml(existing.segment || '') : ''}" placeholder="Ex : Fidèle, Grossiste"></div>
+        <div class="field"><label for="custCreditLimit">Plafond de crédit autorisé (FCFA)</label><input id="custCreditLimit" type="number" min="0" inputmode="numeric" value="${existing ? (existing.credit_limit ?? 0) : 0}"></div>
+        <div class="field"><label for="custNotes">Notes</label><input id="custNotes" value="${existing ? escapeHtml(existing.notes || '') : ''}"></div>
+        ${existing ? `<div class="current-stock-hint">Solde dû actuel : <strong>${fmtFCFA(existing.credit_balance || 0)}</strong></div>` : ''}
+        <button type="submit" class="btn btn-primary btn-block">${existing ? 'Enregistrer' : 'Ajouter le client'}</button>
+        ${existing && (existing.credit_balance || 0) > 0 ? '<button type="button" class="btn btn-ghost btn-block" id="recordPaymentBtn">Enregistrer un paiement</button>' : ''}
+        ${existing && isGerant() ? '<button type="button" class="btn btn-ghost btn-block" id="deleteCustBtn">Supprimer le client</button>' : ''}
+      </form>
+      ${existing ? `
+        <h3 style="margin-top:16px">Historique récent</h3>
+        <div class="history-list">
+          ${history.length === 0
+            ? '<div class="empty-state">Aucun achat enregistré pour ce client.</div>'
+            : history.map(m => {
+                const a = articles[m.article_id];
+                return `<div class="history-row">
+                  <div class="info">
+                    <div class="line1">${escapeHtml(a?.name || 'Article supprimé')}</div>
+                    <div class="line2">${typeWord[m.type] || m.type} · ${new Date(m.at).toLocaleDateString('fr-FR')}</div>
+                  </div>
+                  <div class="amount neg">${m.qty}</div>
+                </div>`;
+              }).join('')}
+        </div>
+      ` : ''}
+    </div>
+  `;
+  document.body.appendChild(backdrop);
+  backdrop.addEventListener('click', (e) => { if (e.target === backdrop) backdrop.remove(); });
+  document.getElementById('closeCustSheet').addEventListener('click', () => backdrop.remove());
+
+  document.getElementById('customerForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const payload = {
+      name: document.getElementById('custName').value.trim(),
+      phone: document.getElementById('custPhone').value.trim() || null,
+      email: document.getElementById('custEmail').value.trim() || null,
+      address: document.getElementById('custAddress').value.trim() || null,
+      segment: document.getElementById('custSegment').value.trim() || null,
+      credit_limit: parseFloat(document.getElementById('custCreditLimit').value) || 0,
+      notes: document.getElementById('custNotes').value.trim() || null,
+    };
+    if (!payload.name) return;
+    try {
+      if (existing) {
+        const { error } = await supa.from('customers').update(payload).eq('id', id);
+        if (error) throw error;
+      } else {
+        const { error } = await supa.from('customers').insert(payload);
+        if (error) throw error;
+      }
+      backdrop.remove();
+      toast('Client enregistré.');
+      await loadCustomers();
+    } catch (err) {
+      console.error(err);
+      toast("Erreur lors de l'enregistrement.");
+    }
+  });
+
+  if (existing) {
+    document.getElementById('recordPaymentBtn')?.addEventListener('click', async () => {
+      const raw = prompt(`Montant payé par ${existing.name} (solde dû : ${fmtFCFA(existing.credit_balance || 0)}) :`);
+      if (raw == null) return;
+      const amount = parseFloat(raw);
+      if (!amount || amount <= 0) { toast('Montant invalide.'); return; }
+      try {
+        const { error } = await supa.rpc('record_customer_payment', { p_customer_id: id, p_amount: amount });
+        if (error) throw error;
+        backdrop.remove();
+        toast('Paiement enregistré.');
+        await loadCustomers();
+      } catch (err) {
+        console.error(err);
+        toast("Erreur lors de l'enregistrement du paiement.");
+      }
+    });
+    document.getElementById('deleteCustBtn')?.addEventListener('click', async () => {
+      try {
+        const { error } = await supa.from('customers').delete().eq('id', id);
+        if (error) throw error;
+        backdrop.remove();
+        toast('Client supprimé.');
+        await loadCustomers();
+      } catch (err) {
+        console.error(err);
+        toast('Erreur lors de la suppression.');
+      }
+    });
+  }
+}
+document.getElementById('addCustomerBtn')?.addEventListener('click', () => openCustomerSheet(null));
 
 // ---------------------------------------------------------------------------
 // Tableau de bord — indicateurs du jour et des 7 derniers jours, construits
@@ -751,6 +919,18 @@ function openMoveSheet(preselectId) {
           </div>
           <div class="current-stock-hint" id="stockHint"></div>
         </div>
+        <div class="field" id="moveCustomerField" ${Object.keys(customers).length === 0 ? 'hidden' : ''}>
+          <label for="moveCustomer">Client (optionnel)</label>
+          <select id="moveCustomer">
+            <option value="">— Vente au comptoir —</option>
+            ${Object.entries(customers).sort((a, b) => a[1].name.localeCompare(b[1].name, 'fr'))
+              .map(([cid, c]) => `<option value="${cid}">${escapeHtml(c.name)}</option>`).join('')}
+          </select>
+        </div>
+        <label class="field" id="moveCreditField" hidden style="flex-direction:row; align-items:center; gap:8px;">
+          <input type="checkbox" id="moveOnCredit" style="width:auto">
+          <span>Vente à crédit (ajoutée au solde dû du client)</span>
+        </label>
         <button type="submit" class="btn btn-primary btn-block" id="moveSubmitBtn">Enregistrer la vente</button>
       </form>
     </div>
@@ -762,7 +942,18 @@ function openMoveSheet(preselectId) {
   let activeType = 'vente';
   const typeBtns = backdrop.querySelectorAll('.move-type-btn');
   const submitBtn = document.getElementById('moveSubmitBtn');
+  const customerField = document.getElementById('moveCustomerField');
+  const creditField = document.getElementById('moveCreditField');
+  const customerSelect = document.getElementById('moveCustomer');
+  const creditCheckbox = document.getElementById('moveOnCredit');
   const verbByType = { vente: 'Enregistrer la vente', reassort: "Enregistrer l'entrée", perte: 'Enregistrer la perte' };
+  function updateCustomerFieldsVisibility() {
+    const show = activeType === 'vente' && Object.keys(customers).length > 0;
+    customerField.hidden = !show;
+    creditField.hidden = !show || !customerSelect.value;
+    if (!show || !customerSelect.value) creditCheckbox.checked = false;
+  }
+  customerSelect.addEventListener('change', updateCustomerFieldsVisibility);
   typeBtns.forEach(btn => {
     btn.addEventListener('click', () => {
       typeBtns.forEach(b => b.classList.remove('active'));
@@ -770,8 +961,10 @@ function openMoveSheet(preselectId) {
       activeType = btn.dataset.type;
       submitBtn.textContent = verbByType[activeType];
       updateStockHint();
+      updateCustomerFieldsVisibility();
     });
   });
+  updateCustomerFieldsVisibility();
 
   const articleSelect = document.getElementById('moveArticle');
   const qtyInput = document.getElementById('moveQty');
@@ -801,21 +994,25 @@ function openMoveSheet(preselectId) {
       toast('Quantité supérieure au stock disponible.');
       return;
     }
+    const customerId = (activeType === 'vente' && customerSelect.value) ? customerSelect.value : null;
+    const onCredit = activeType === 'vente' && customerId && creditCheckbox.checked;
     submitBtn.disabled = true;
     try {
       // Réassort : toujours en ligne (réservé au gérant, moins urgent à enregistrer immédiatement).
-      // Vente / Perte : tolère l'absence de réseau, mise en file d'attente locale.
-      if (activeType === 'reassort') {
-        await recordMovement(articleId, activeType, qty);
+      // Vente à crédit : toujours en ligne aussi — le solde client doit rester fiable,
+      // pas d'estimation optimiste hors-ligne pour l'argent dû.
+      // Vente au comptant / Perte : tolère l'absence de réseau, mise en file d'attente locale.
+      if (activeType === 'reassort' || onCredit) {
+        await recordMovement(articleId, activeType, qty, customerId, !!onCredit);
         toast('Mouvement enregistré.');
       } else {
-        const wentOffline = await recordMovementTolerant(articleId, activeType, qty);
+        const wentOffline = await recordMovementTolerant(articleId, activeType, qty, customerId);
         toast(wentOffline ? 'Hors-ligne : vente enregistrée, en attente de synchronisation.' : 'Mouvement enregistré.');
       }
       backdrop.remove();
     } catch (err) {
       console.error(err);
-      toast("Erreur lors de l'enregistrement.");
+      toast(err.message && err.message.includes('crédit') ? err.message : "Erreur lors de l'enregistrement.");
       submitBtn.disabled = false;
     }
   });
@@ -1075,13 +1272,16 @@ document.getElementById('historyFilter').addEventListener('change', renderHistor
 // ---------------------------------------------------------------------------
 // Data layer: Supabase
 // ---------------------------------------------------------------------------
-async function recordMovement(articleId, type, qty) {
+async function recordMovement(articleId, type, qty, customerId = null, onCredit = false) {
   // Passe par la fonction sécurisée côté serveur : elle revérifie le rôle,
-  // met à jour le stock et insère le mouvement de façon atomique.
+  // met à jour le stock et insère le mouvement de façon atomique. Pour une
+  // vente à crédit, elle incrémente aussi le solde dû du client (module 3).
   const { error } = await supa.rpc('record_movement', {
     p_article_id: articleId,
     p_type: type,
     p_qty: qty,
+    p_customer_id: customerId,
+    p_on_credit: onCredit,
   });
   if (error) throw error;
   markActivity();
@@ -1094,17 +1294,17 @@ async function recordMovement(articleId, type, qty) {
 // échoue pour une raison réseau), le mouvement est mis en file d'attente locale
 // et appliqué à l'affichage de façon optimiste (le stock réel sera recalé dès
 // la synchronisation). Retourne true si le mouvement est parti en hors-ligne.
-async function recordMovementTolerant(articleId, type, qty) {
+async function recordMovementTolerant(articleId, type, qty, customerId = null) {
   if (navigator.onLine) {
     try {
-      await recordMovement(articleId, type, qty);
+      await recordMovement(articleId, type, qty, customerId, false);
       return false;
     } catch (err) {
       // Si l'erreur ne ressemble pas à un problème réseau (ex: refusé par le serveur), on la relance.
       if (!isLikelyNetworkError(err)) throw err;
     }
   }
-  await queueOfflineMovement(articleId, type, qty);
+  await queueOfflineMovement(articleId, type, qty, customerId);
   return true;
 }
 
@@ -1113,13 +1313,14 @@ function isLikelyNetworkError(err) {
   return !navigator.onLine || msg.includes('fetch') || msg.includes('network') || msg.includes('failed to fetch');
 }
 
-async function queueOfflineMovement(articleId, type, qty) {
+async function queueOfflineMovement(articleId, type, qty, customerId = null) {
   markActivity();
   const entry = {
     localId: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     article_id: articleId,
     type,
     qty,
+    customer_id: customerId,
     by_name: currentProfile?.display_name || currentProfile?.email || 'inconnu',
     created_at: new Date().toISOString(),
   };
@@ -1136,6 +1337,7 @@ async function queueOfflineMovement(articleId, type, qty) {
     article_id: articleId,
     type,
     qty,
+    customer_id: customerId,
     by_name: entry.by_name,
     at: entry.created_at,
     pending: true,
@@ -1153,7 +1355,7 @@ async function syncPendingMovements() {
     pending.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
     for (const entry of pending) {
       try {
-        await recordMovement(entry.article_id, entry.type, entry.qty);
+        await recordMovement(entry.article_id, entry.type, entry.qty, entry.customer_id ?? null, false);
         await removePendingMovement(entry.localId);
       } catch (err) {
         console.error('Échec synchronisation mouvement en attente:', err);
@@ -1256,6 +1458,23 @@ async function loadMovements() {
   cacheData();
 }
 
+async function loadCustomers() {
+  const { data, error } = await supa.from('customers').select('*').order('name');
+  if (error) {
+    console.error(error);
+    return;
+  }
+  customers = {};
+  (data || []).forEach(row => {
+    customers[row.id] = {
+      name: row.name, phone: row.phone, email: row.email, address: row.address,
+      segment: row.segment, credit_limit: row.credit_limit, credit_balance: row.credit_balance,
+      notes: row.notes,
+    };
+  });
+  renderCustomers();
+}
+
 // Réapplique par-dessus l'état serveur les mouvements encore en file d'attente
 // locale (pas encore synchronisés), pour que l'affichage reste cohérent même
 // si un chargement serveur intervient pendant que l'app est hors-ligne.
@@ -1279,6 +1498,7 @@ async function reapplyPendingMovements() {
         article_id: entry.article_id,
         type: entry.type,
         qty: entry.qty,
+        customer_id: entry.customer_id ?? null,
         by_name: entry.by_name,
         at: entry.created_at,
         pending: true,
@@ -1361,6 +1581,7 @@ function showLogin() {
   document.querySelector('.app-fixed-top nav.tabs').hidden = true;
   document.getElementById('fixedPanel-stock').hidden = true;
   document.getElementById('fixedPanel-historique').hidden = true;
+  document.getElementById('fixedPanel-clients').hidden = true;
   document.getElementById('fixedPanel-articles').hidden = true;
   document.getElementById('offlineStatus').hidden = true;
   document.getElementById('pendingBadge').hidden = true;
@@ -1379,6 +1600,7 @@ function showSignup() {
   document.querySelector('.app-fixed-top nav.tabs').hidden = true;
   document.getElementById('fixedPanel-stock').hidden = true;
   document.getElementById('fixedPanel-historique').hidden = true;
+  document.getElementById('fixedPanel-clients').hidden = true;
   document.getElementById('fixedPanel-articles').hidden = true;
   document.getElementById('offlineStatus').hidden = true;
   document.getElementById('pendingBadge').hidden = true;
@@ -1435,7 +1657,7 @@ function showApp() {
   document.getElementById('logoutBtn').hidden = false;
   document.getElementById('changePasswordBtn').hidden = false;
   document.querySelector('.app-fixed-top nav.tabs').hidden = false;
-  ['dashboard', 'stock', 'historique', 'articles'].forEach(t => {
+  ['dashboard', 'stock', 'historique', 'clients', 'articles'].forEach(t => {
     document.getElementById('fixedPanel-' + t).hidden = (t !== currentTab);
   });
   document.getElementById('fixedTop').hidden = false;
@@ -1542,6 +1764,7 @@ function enterAppWithProfile() {
   subscribeRealtime();
   loadArticles();
   loadMovements();
+  loadCustomers();
   updateOnlineStatus();
   updatePendingBadge();
   syncPendingMovements();
@@ -1584,11 +1807,15 @@ function subscribeRealtime() {
   movementsChannel = supa.channel('public:movements')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'movements' }, loadMovements)
     .subscribe();
+  customersChannel = supa.channel('public:customers')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, loadCustomers)
+    .subscribe();
 }
 
 function unsubscribeRealtime() {
   if (articlesChannel) { supa.removeChannel(articlesChannel); articlesChannel = null; }
   if (movementsChannel) { supa.removeChannel(movementsChannel); movementsChannel = null; }
+  if (customersChannel) { supa.removeChannel(customersChannel); customersChannel = null; }
 }
 
 async function start() {
