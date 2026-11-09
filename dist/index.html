@@ -329,6 +329,7 @@ form { display: flex; flex-direction: column; gap: 14px; }
     <div class="who" id="whoBox">
       <span class="dot off" id="whoDot"></span>
       <span id="whoLabel">Connexion…</span>
+      <button class="logout-link-top" id="teamBtn" hidden>Équipe</button>
       <button class="logout-link-top" id="changePasswordBtn" hidden>Mot de passe</button>
       <button class="logout-link-top" id="logoutBtn" hidden>Se déconnecter</button>
     </div>
@@ -438,6 +439,7 @@ form { display: flex; flex-direction: column; gap: 14px; }
       <p class="login-error" id="loginError"></p>
     </form>
     <button type="button" class="btn btn-ghost btn-block" style="margin-top:10px" id="showSignupBtn">Créer une boutique</button>
+    <button type="button" class="btn btn-ghost btn-block" id="showJoinBtn">Rejoindre une boutique (code d'invitation)</button>
   </div>
 </div>
 
@@ -454,6 +456,36 @@ form { display: flex; flex-direction: column; gap: 14px; }
       <p class="login-error" id="signupError"></p>
     </form>
     <button type="button" class="btn btn-ghost btn-block" style="margin-top:10px" id="showLoginBtn">J'ai déjà un compte</button>
+  </div>
+</div>
+
+<div id="joinScreen" class="login-screen" hidden>
+  <div class="login-card">
+    <h1>Rejoindre une boutique</h1>
+    <p class="subtitle">Créez votre compte avec l'email qui a reçu l'invitation</p>
+    <form id="joinForm">
+      <div class="field"><label for="joinName">Votre nom</label><input id="joinName" type="text" required autocomplete="name" placeholder="Ex : Moussa"></div>
+      <div class="field" style="margin-top:10px"><label for="joinEmail">Email</label><input id="joinEmail" type="email" required autocomplete="username"></div>
+      <div class="field" style="margin-top:10px"><label for="joinPassword">Mot de passe</label><input id="joinPassword" type="password" required minlength="8" autocomplete="new-password"></div>
+      <p class="current-stock-hint" style="margin-top:4px">Au moins 8 caractères.</p>
+      <div class="field" style="margin-top:10px"><label for="joinCode">Code d'invitation</label><input id="joinCode" type="text" required autocomplete="off" placeholder="XXXX-XXXX" style="text-transform:uppercase; font-family:var(--font-mono)"></div>
+      <button type="submit" class="btn btn-primary btn-block" style="margin-top:14px" id="joinSubmitBtn">Rejoindre la boutique</button>
+      <p class="login-error" id="joinError"></p>
+    </form>
+    <button type="button" class="btn btn-ghost btn-block" style="margin-top:10px" id="joinBackBtn">J'ai déjà un compte</button>
+  </div>
+</div>
+
+<div id="noShopScreen" class="login-screen" hidden>
+  <div class="login-card">
+    <h1>Aucune boutique</h1>
+    <p class="subtitle" id="noShopSubtitle">Votre compte n'est rattaché à aucune boutique. Saisissez le code d'invitation reçu de votre responsable.</p>
+    <form id="noShopForm">
+      <div class="field"><label for="noShopCode">Code d'invitation</label><input id="noShopCode" type="text" required autocomplete="off" placeholder="XXXX-XXXX" style="text-transform:uppercase; font-family:var(--font-mono)"></div>
+      <button type="submit" class="btn btn-primary btn-block" style="margin-top:14px">Rejoindre la boutique</button>
+      <p class="login-error" id="noShopError"></p>
+    </form>
+    <button type="button" class="btn btn-ghost btn-block" style="margin-top:10px" id="noShopLogoutBtn">Se déconnecter</button>
   </div>
 </div>
 
@@ -2631,6 +2663,7 @@ function applyRoleToUI() {
   document.getElementById('ventesTabBtn').hidden = currentProfile.role === 'livreur';
   document.getElementById('shopSettingsBtn').hidden = !gerant;
   document.getElementById('achatsTabBtn').hidden = !canManageInvoices();
+  document.getElementById('teamBtn').hidden = currentProfile.role !== 'owner';
   // Si le vendeur était sur l'onglet Articles au moment où le rôle se charge, on le ramène sur Stock
   if (!gerant && currentTab === 'articles') {
     currentTab = 'stock';
@@ -2642,8 +2675,7 @@ function applyRoleToUI() {
     document.getElementById('fixedPanel-historique').hidden = true;
     document.getElementById('fixedPanel-articles').hidden = true;
   }
-  const roleLabels = { owner: 'Propriétaire', gerant: 'Gérant', comptable: 'Comptable', vendeur: 'Vendeur', livreur: 'Livreur' };
-  const label = roleLabels[currentProfile.role] || (gerant ? 'Gérant' : 'Vendeur');
+  const label = ROLE_LABELS[currentProfile.role] || (gerant ? 'Gérant' : 'Vendeur');
   const cls = gerant ? 'gerant' : 'vendeur';
   document.getElementById('whoLabel').innerHTML = `${escapeHtml(currentProfile.display_name || currentProfile.email)} <span class="role-badge ${cls}">${label}</span>`;
 }
@@ -2987,8 +3019,10 @@ function openImportSheet(parsedRows) {
           if (error) throw error;
           if (p.qty > 0) await recordMovement(p.existingId, 'reassort', p.qty);
         } else {
+          // Créé à 0 : la quantité importée entre ensuite par un réassort
+          // (sinon elle était comptée deux fois).
           const { data, error } = await supa.from('articles').insert({
-            name: p.name, category: p.category, qty: p.qty,
+            name: p.name, category: p.category, qty: 0,
             buy_price: p.buy_price, sell_price: p.sell_price, threshold: p.threshold,
           }).select('id').single();
           if (error) throw error;
@@ -3339,6 +3373,9 @@ document.getElementById('changePasswordBtn').addEventListener('click', openPassw
 function showLogin() {
   document.getElementById('loginScreen').hidden = false;
   document.getElementById('signupScreen').hidden = true;
+  document.getElementById('joinScreen').hidden = true;
+  document.getElementById('noShopScreen').hidden = true;
+  document.getElementById('teamBtn').hidden = true;
   document.getElementById('app').hidden = true;
   document.getElementById('fabMove').hidden = true;
   document.getElementById('whoLabel').textContent = 'Non connecté';
@@ -3360,6 +3397,9 @@ function showLogin() {
 function showSignup() {
   document.getElementById('loginScreen').hidden = true;
   document.getElementById('signupScreen').hidden = false;
+  document.getElementById('joinScreen').hidden = true;
+  document.getElementById('noShopScreen').hidden = true;
+  document.getElementById('teamBtn').hidden = true;
   document.getElementById('app').hidden = true;
   document.getElementById('fabMove').hidden = true;
   document.getElementById('whoLabel').textContent = 'Non connecté';
@@ -3380,6 +3420,257 @@ function showSignup() {
 
 document.getElementById('showSignupBtn').addEventListener('click', showSignup);
 document.getElementById('showLoginBtn').addEventListener('click', showLogin);
+// ---------------------------------------------------------------------------
+// Équipe : rejoindre une boutique par code d'invitation, gestion des membres
+// (propriétaire uniquement). Les règles (email lié au code, expiration,
+// usage unique, rôles) sont vérifiées côté serveur (migration 007).
+// ---------------------------------------------------------------------------
+const ROLE_LABELS = { owner: 'Propriétaire', gerant: 'Gérant', comptable: 'Comptable', vendeur: 'Vendeur', livreur: 'Livreur' };
+const INVITABLE_ROLES = ['gerant', 'comptable', 'vendeur', 'livreur'];
+const ROLE_HINTS = {
+  gerant: 'tout, sauf la gestion de l\'équipe',
+  comptable: 'factures, achats, paiements — pas le stock physique',
+  vendeur: 'ventes, retours, clients — pas les achats',
+  livreur: 'livraisons (module à venir)',
+};
+const PENDING_INVITE_KEY = 'erp-boutique-pending-invite';
+
+function readPendingInvite() {
+  try { return JSON.parse(localStorage.getItem(PENDING_INVITE_KEY) || 'null'); } catch (err) { return null; }
+}
+function savePendingInvite(email, code) {
+  try { localStorage.setItem(PENDING_INVITE_KEY, JSON.stringify({ email: email.toLowerCase(), code: code.toUpperCase() })); } catch (err) { /* non bloquant */ }
+}
+function clearPendingInvite() {
+  try { localStorage.removeItem(PENDING_INVITE_KEY); } catch (err) { /* non bloquant */ }
+}
+function normalizeCode(v) {
+  const c = String(v || '').toUpperCase().replace(/[^0-9A-F]/g, '');
+  return c.length === 8 ? c.slice(0, 4) + '-' + c.slice(4) : String(v || '').trim().toUpperCase();
+}
+
+function showJoin() {
+  showSignup();
+  document.getElementById('signupScreen').hidden = true;
+  document.getElementById('joinScreen').hidden = false;
+  document.getElementById('joinError').textContent = '';
+}
+function showNoShop() {
+  showSignup();
+  document.getElementById('signupScreen').hidden = true;
+  document.getElementById('noShopScreen').hidden = false;
+  document.getElementById('whoLabel').textContent = currentProfile?.email || 'Connecté';
+  document.getElementById('noShopCode').value = '';
+}
+document.getElementById('showJoinBtn').addEventListener('click', showJoin);
+document.getElementById('joinBackBtn').addEventListener('click', showLogin);
+document.getElementById('noShopLogoutBtn').addEventListener('click', async () => {
+  await supa.auth.signOut();
+  currentProfile = null;
+  showLogin();
+});
+
+document.getElementById('joinForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const name = document.getElementById('joinName').value.trim();
+  const email = document.getElementById('joinEmail').value.trim();
+  const password = document.getElementById('joinPassword').value;
+  const code = normalizeCode(document.getElementById('joinCode').value);
+  const btn = document.getElementById('joinSubmitBtn');
+  const errEl = document.getElementById('joinError');
+  errEl.textContent = '';
+  if (!navigator.onLine) { errEl.textContent = 'Rejoindre une boutique nécessite une connexion internet.'; return; }
+  btn.disabled = true;
+  try {
+    const { data, error } = await supa.auth.signUp({ email, password, options: { data: { name } } });
+    if (error) {
+      if (String(error.message).toLowerCase().includes('already registered')) {
+        // Compte déjà existant : il suffit de se connecter, le code sera appliqué
+        savePendingInvite(email, code);
+        throw new Error('Un compte existe déjà avec cet email : connectez-vous, le code sera appliqué automatiquement.');
+      }
+      throw error;
+    }
+    if (data.session) {
+      const { error: invError } = await supa.rpc('accept_shop_invitation', { p_code: code });
+      if (invError) throw invError;
+      await loadProfileAndEnter(data.user.id);
+      toast('Bienvenue dans la boutique !');
+    } else {
+      // Confirmation d'email requise : le code sera appliqué à la première connexion
+      savePendingInvite(email, code);
+      toast('Compte créé. Confirmez votre email, puis connectez-vous.');
+      showLogin();
+    }
+  } catch (err) {
+    console.error(err);
+    errEl.textContent = err.message || 'Impossible de rejoindre la boutique.';
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+document.getElementById('noShopForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const errEl = document.getElementById('noShopError');
+  errEl.textContent = '';
+  const code = normalizeCode(document.getElementById('noShopCode').value);
+  const btn = e.target.querySelector('button[type="submit"]');
+  btn.disabled = true;
+  try {
+    const { error } = await supa.rpc('accept_shop_invitation', { p_code: code });
+    if (error) throw error;
+    await loadProfileAndEnter(currentProfile.id);
+    toast('Bienvenue dans la boutique !');
+  } catch (err) {
+    console.error(err);
+    errEl.textContent = err.message || 'Code refusé.';
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+function invitationMessage(inv) {
+  const shopName = shopInfo?.name || 'notre boutique';
+  return `Bonjour, vous êtes invité(e) à rejoindre « ${shopName} » sur ERP Boutique en tant que ${ROLE_LABELS[inv.role].toLowerCase()}.\n`
+    + `1. Installez l'application ERP Boutique.\n`
+    + `2. Sur l'écran de connexion, cliquez sur « Rejoindre une boutique ».\n`
+    + `3. Créez votre compte avec l'adresse ${inv.email} et le code ${inv.code}.\n`
+    + `Le code est valable jusqu'au ${fmtDate(inv.expires_at)} et ne sert qu'une fois.`;
+}
+async function copyText(text) {
+  try { await navigator.clipboard.writeText(text); return true; }
+  catch (err) {
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch (e2) { ok = false; }
+    ta.remove();
+    return ok;
+  }
+}
+
+async function openTeamSheet() {
+  if (!currentProfile || currentProfile.role !== 'owner') return;
+  if (!navigator.onLine) { toast('Connexion internet nécessaire.'); return; }
+  const [mem, inv] = await Promise.all([
+    supa.from('profiles').select('id, email, display_name, role, created_at').order('created_at'),
+    supa.from('shop_invitations').select('*').is('accepted_at', null).is('revoked_at', null).order('created_at', { ascending: false }),
+  ]);
+  if (mem.error) { toast(mem.error.message); return; }
+  const members = (mem.data || []).slice().sort((a, b) => (a.role === 'owner' ? -1 : b.role === 'owner' ? 1 : 0));
+  const now = Date.now();
+  const invitations = (inv.data || []);
+
+  const backdrop = document.createElement('div');
+  backdrop.className = 'sheet-backdrop';
+  backdrop.innerHTML = `
+    <div class="sheet">
+      <div class="sheet-head"><h2>Équipe</h2><button class="sheet-close" type="button">✕</button></div>
+      <div class="doc-view-lines">${members.map(m => {
+        const isOwner = m.role === 'owner';
+        return `<div class="doc-view-line" style="align-items:center">
+          <div class="d">${escapeHtml(m.display_name || m.email)}${m.id === currentProfile.id ? ' (vous)' : ''}<small>${escapeHtml(m.email)}</small></div>
+          ${isOwner
+            ? `<span class="doc-badge accent">${ROLE_LABELS.owner}</span>`
+            : `<div style="display:flex; gap:6px; align-items:center; flex:none">
+                 <select data-role-for="${m.id}" style="border:1px solid var(--border); background:var(--bg); color:var(--ink); border-radius:8px; padding:6px 8px; font-size:0.82rem">
+                   ${INVITABLE_ROLES.map(r => `<option value="${r}" ${m.role === r ? 'selected' : ''}>${ROLE_LABELS[r]}</option>`).join('')}
+                 </select>
+                 <button type="button" class="remove-line" data-remove="${m.id}" style="background:none;border:none;color:var(--bad);font-weight:600;cursor:pointer">Retirer</button>
+               </div>`}
+        </div>`;
+      }).join('')}</div>
+
+      ${invitations.length ? `<h3>Invitations en attente</h3>
+      <div class="doc-view-lines">${invitations.map(i => {
+        const expired = new Date(i.expires_at).getTime() < now;
+        return `<div class="doc-view-line" style="align-items:center">
+          <div class="d">${escapeHtml(i.email)} · ${ROLE_LABELS[i.role]}
+            <small>Code <strong style="font-family:var(--font-mono); color:var(--ink)">${escapeHtml(i.code)}</strong> · ${expired ? '<span style="color:var(--bad)">expiré</span>' : 'valable jusqu\'au ' + fmtDate(i.expires_at)}</small></div>
+          <div style="display:flex; gap:10px; flex:none">
+            ${expired ? '' : `<button type="button" data-copy="${i.id}" style="background:none;border:none;color:var(--accent);font-weight:600;cursor:pointer">Copier le message</button>`}
+            <button type="button" data-revoke="${i.id}" style="background:none;border:none;color:var(--bad);font-weight:600;cursor:pointer">Annuler</button>
+          </div>
+        </div>`;
+      }).join('')}</div>` : ''}
+
+      <h3>Inviter un membre</h3>
+      <form id="inviteForm">
+        <div class="field"><label for="invEmail">Email de la personne</label><input id="invEmail" type="email" required placeholder="Ex : moussa@gmail.com"></div>
+        <div class="field"><label for="invRole">Rôle</label>
+          <select id="invRole">${INVITABLE_ROLES.map(r => `<option value="${r}" ${r === 'vendeur' ? 'selected' : ''}>${ROLE_LABELS[r]} — ${ROLE_HINTS[r]}</option>`).join('')}</select></div>
+        <p class="sheet-error" id="invError"></p>
+        <button type="submit" class="btn btn-primary btn-block">Créer l'invitation</button>
+      </form>
+      <div id="invResult"></div>
+      <div class="fne-note">La personne doit créer son compte avec <strong>exactement cet email</strong>. Un membre retiré perd tout accès à la boutique ; l'historique de ses ventes est conservé.</div>
+    </div>`;
+  document.body.appendChild(backdrop);
+  const close = () => backdrop.remove();
+  backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(); });
+  backdrop.querySelector('.sheet-close').addEventListener('click', close);
+  const refresh = () => { close(); openTeamSheet(); };
+
+  backdrop.querySelectorAll('[data-role-for]').forEach(sel => sel.addEventListener('change', async () => {
+    const { error } = await supa.rpc('set_member_role', { p_user_id: sel.dataset.roleFor, p_role: sel.value });
+    if (error) { toast(error.message); refresh(); return; }
+    toast(`Rôle modifié : ${ROLE_LABELS[sel.value]}.`);
+  }));
+  backdrop.querySelectorAll('[data-remove]').forEach(btn => btn.addEventListener('click', () => {
+    const m = members.find(x => x.id === btn.dataset.remove);
+    close();
+    openFormSheet({
+      title: 'Retirer un membre',
+      intro: `${escapeHtml(m.display_name || m.email)} n'aura plus accès à la boutique. Son compte et l'historique de ses ventes sont conservés ; vous pourrez le réinviter plus tard.`,
+      fields: [],
+      submitLabel: 'Retirer de la boutique',
+      onSubmit: async () => {
+        const { error } = await supa.rpc('remove_member', { p_user_id: m.id });
+        if (error) throw error;
+        toast('Membre retiré.');
+        setTimeout(openTeamSheet, 0);
+      },
+    });
+  }));
+  backdrop.querySelectorAll('[data-copy]').forEach(btn => btn.addEventListener('click', async () => {
+    const i = invitations.find(x => x.id === btn.dataset.copy);
+    toast(await copyText(invitationMessage(i)) ? 'Message copié : collez-le dans WhatsApp ou un SMS.' : 'Copie impossible : notez le code affiché.');
+  }));
+  backdrop.querySelectorAll('[data-revoke]').forEach(btn => btn.addEventListener('click', async () => {
+    const { error } = await supa.rpc('revoke_shop_invitation', { p_id: btn.dataset.revoke });
+    if (error) { toast(error.message); return; }
+    toast('Invitation annulée.');
+    refresh();
+  }));
+
+  document.getElementById('inviteForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errEl = document.getElementById('invError');
+    errEl.textContent = '';
+    const email = document.getElementById('invEmail').value.trim().toLowerCase();
+    const role = document.getElementById('invRole').value;
+    const btn = e.target.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    const { data: code, error } = await supa.rpc('create_shop_invitation', { p_email: email, p_role: role });
+    btn.disabled = false;
+    if (error) { errEl.textContent = error.message; return; }
+    const inv = { email, role, code, expires_at: new Date(Date.now() + 7 * 86400000).toISOString() };
+    const msg = invitationMessage(inv);
+    document.getElementById('invResult').innerHTML = `
+      <div class="doc-totals" style="gap:8px">
+        <div><span>Code d'invitation</span><span style="font-size:1.2rem; font-weight:700">${escapeHtml(code)}</span></div>
+        <div class="current-stock-hint" style="white-space:pre-line">${escapeHtml(msg)}</div>
+        <button type="button" class="btn btn-primary btn-block" id="copyInviteBtn">Copier le message à envoyer</button>
+      </div>`;
+    document.getElementById('copyInviteBtn').addEventListener('click', async () => {
+      toast(await copyText(msg) ? 'Message copié : collez-le dans WhatsApp ou un SMS.' : 'Copie impossible : notez le code affiché.');
+    });
+    e.target.reset();
+  });
+}
+document.getElementById('teamBtn').addEventListener('click', openTeamSheet);
+
 
 document.getElementById('signupForm').addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -3424,6 +3715,8 @@ document.getElementById('signupForm').addEventListener('submit', async (e) => {
 function showApp() {
   document.getElementById('loginScreen').hidden = true;
   document.getElementById('signupScreen').hidden = true;
+  document.getElementById('joinScreen').hidden = true;
+  document.getElementById('noShopScreen').hidden = true;
   document.getElementById('app').hidden = false;
   document.getElementById('logoutBtn').hidden = false;
   document.getElementById('changePasswordBtn').hidden = false;
@@ -3521,6 +3814,32 @@ async function loadProfileAndEnter(userId) {
     }
   }
 
+  // Invitation saisie à l'inscription, en attente de confirmation d'email
+  if (!data.shop_id) {
+    const pend = readPendingInvite();
+    if (pend && pend.email === String(data.email || '').toLowerCase()) {
+      try {
+        const { error: invError } = await supa.rpc('accept_shop_invitation', { p_code: pend.code });
+        if (invError) throw invError;
+        clearPendingInvite();
+        const { data: refreshed } = await supa.from('profiles').select('*').eq('id', userId).single();
+        if (refreshed) data = refreshed;
+      } catch (err) {
+        console.error(err);
+        clearPendingInvite();
+        document.getElementById('noShopError').textContent = err.message || 'Code d\'invitation refusé.';
+      }
+    }
+  }
+
+  // Compte sans boutique (membre retiré, invitation pas encore utilisée) :
+  // on ne laisse pas entrer dans une app vide, on demande un code.
+  if (!data.shop_id) {
+    currentProfile = data;
+    showNoShop();
+    return;
+  }
+
   currentProfile = data;
   cacheProfile(userId, data);
   enterAppWithProfile();
@@ -3571,6 +3890,12 @@ document.getElementById('logoutBtn').addEventListener('click', async () => {
   currentProfile = null;
   articles = {};
   movements = [];
+  customers = {};
+  salesDocs = {};
+  returnsMap = {};
+  suppliersMap = {};
+  purchaseOrders = {};
+  shopInfo = null;
   showLogin();
 });
 
