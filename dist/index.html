@@ -275,6 +275,8 @@ form { display: flex; flex-direction: column; gap: 14px; }
 .doc-line label { font-size: 0.7rem; font-weight: 600; color: var(--ink-dim); display: flex; flex-direction: column; gap: 3px; }
 .doc-line .line-foot { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem; }
 .doc-line .line-foot strong { font-family: var(--font-mono); }
+.doc-line input[type="checkbox"] { width: auto; flex: none; }
+.doc-line .check-line { font-size: 0.8rem; color: var(--ink); }
 .doc-line .remove-line { background: none; border: none; color: var(--bad); font-size: 0.8rem; font-weight: 600; cursor: pointer; padding: 2px 4px; }
 .doc-totals { background: var(--surface-sunken); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 4px; font-size: 0.86rem; }
 .doc-totals div { display: flex; justify-content: space-between; }
@@ -343,7 +345,7 @@ form { display: flex; flex-direction: column; gap: 14px; }
     <button class="tab-btn" data-tab="stock">Stock</button>
     <button class="tab-btn" data-tab="historique">Historique</button>
     <button class="tab-btn" data-tab="clients" id="clientsTabBtn">Clients</button>
-    <button class="tab-btn" data-tab="ventes" id="ventesTabBtn">Devis &amp; Factures</button>
+    <button class="tab-btn" data-tab="ventes" id="ventesTabBtn">Ventes</button>
     <button class="tab-btn" data-tab="articles" id="articlesTabBtn">Articles</button>
   </nav>
 
@@ -382,6 +384,7 @@ form { display: flex; flex-direction: column; gap: 14px; }
       <button class="btn btn-ghost" id="newQuoteBtn">+ Nouveau devis</button>
       <button class="btn btn-ghost" id="newInvoiceBtn">+ Nouvelle facture</button>
     </div>
+    <button class="btn btn-ghost btn-block" id="newReturnBtn">↩ Nouveau retour (vente au comptoir)</button>
     <div class="searchbar">
       <input type="search" id="docSearchInput" placeholder="N°, client…">
       <select id="docFilter">
@@ -390,6 +393,7 @@ form { display: flex; flex-direction: column; gap: 14px; }
         <option value="facture">Factures</option>
         <option value="impayees">Impayées</option>
         <option value="brouillons">Brouillons</option>
+        <option value="retours">Retours</option>
       </select>
     </div>
     <button class="btn btn-ghost btn-block" id="shopSettingsBtn" hidden>⚙ Infos boutique (en-tête des documents)</button>
@@ -556,6 +560,7 @@ let customers = {};  // id -> {name, phone, email, address, segment, credit_limi
 let salesDocs = {};  // id -> document (devis/facture) avec .sales_document_lines et .invoice_payments
 let shopInfo = null; // ligne `shops` de la boutique courante (en-tête, TVA)
 let salesDocsChannel = null;
+let returnsMap = {};  // id -> retour avec .return_lines
 let currentTab = 'dashboard';
 let currentProfile = null; // {role, display_name, email}
 let articlesChannel = null;
@@ -987,7 +992,7 @@ function canManageInvoices() {
   return currentProfile && ['owner', 'gerant', 'comptable'].includes(currentProfile.role);
 }
 function invoiceRemaining(d) {
-  return Math.max(0, (Number(d.total_ttc) || 0) - (Number(d.amount_paid) || 0));
+  return Math.max(0, (Number(d.total_ttc) || 0) - (Number(d.amount_paid) || 0) - (Number(d.credited_amount) || 0));
 }
 function paymentStatus(d) {
   if (d.doc_type !== 'facture' || d.status !== 'emise') return null;
@@ -1054,29 +1059,50 @@ function renderSalesDocs() {
   if (!host) return;
   const filter = document.getElementById('docFilter')?.value || '';
   const search = (document.getElementById('docSearchInput')?.value || '').trim().toLowerCase();
-  let list = Object.entries(salesDocs);
-  if (filter === 'devis' || filter === 'facture') list = list.filter(([, d]) => d.doc_type === filter);
-  if (filter === 'impayees') list = list.filter(([, d]) => ['impaye', 'partiel'].includes(paymentStatus(d)));
-  if (filter === 'brouillons') list = list.filter(([, d]) => d.status === 'brouillon');
+
+  let docs = filter === 'retours' ? [] : Object.entries(salesDocs);
+  if (filter === 'devis' || filter === 'facture') docs = docs.filter(([, d]) => d.doc_type === filter);
+  if (filter === 'impayees') docs = docs.filter(([, d]) => ['impaye', 'partiel'].includes(paymentStatus(d)));
+  if (filter === 'brouillons') docs = docs.filter(([, d]) => d.status === 'brouillon');
+  let rets = (filter === '' || filter === 'retours') ? Object.entries(returnsMap) : [];
   if (search) {
-    list = list.filter(([, d]) =>
-      (d.number || '').toLowerCase().includes(search) ||
-      (d.customer_name || '').toLowerCase().includes(search) ||
-      (d.fne_number || '').toLowerCase().includes(search));
+    const match = (...vals) => vals.some(v => (v || '').toLowerCase().includes(search));
+    docs = docs.filter(([, d]) => match(d.number, d.customer_name, d.fne_number));
+    rets = rets.filter(([, r]) => match(r.number, r.customer_name, r.fne_number, salesDocs[r.source_document_id]?.number));
   }
-  if (list.length === 0) {
-    host.innerHTML = `<div class="empty-state">${Object.keys(salesDocs).length === 0
-      ? 'Aucun devis ni facture. Créez le premier ci-dessus.'
+
+  const rows = [
+    ...docs.map(([id, d]) => ({ kind: 'doc', id, at: d.created_at, d })),
+    ...rets.map(([id, r]) => ({ kind: 'ret', id, at: r.created_at, r })),
+  ].sort((a, b) => new Date(b.at) - new Date(a.at));
+
+  if (rows.length === 0) {
+    host.innerHTML = `<div class="empty-state">${Object.keys(salesDocs).length + Object.keys(returnsMap).length === 0
+      ? 'Aucun devis, facture ni retour. Créez le premier ci-dessus.'
       : 'Aucun document ne correspond.'}</div>`;
     return;
   }
-  host.innerHTML = list.map(([id, d]) => {
+  host.innerHTML = rows.map(row => {
+    if (row.kind === 'ret') {
+      const r = row.r;
+      const src = salesDocs[r.source_document_id];
+      return `
+        <div class="article-row" data-kind="ret" data-id="${row.id}">
+          <div class="info">
+            <div class="name">${escapeHtml(r.number)}</div>
+            <div class="meta">${escapeHtml(r.customer_name || 'Client non renseigné')} · ${fmtDate(r.return_date)}${src ? ' · ' + escapeHtml(src.number || '') : ''}
+              <span class="doc-badge accent">Retour</span> <span class="doc-badge">${RETURN_REASONS[r.reason_category] || r.reason_category}</span></div>
+          </div>
+          <div class="qty">${fmtFCFA(r.refund_amount > 0 ? r.refund_amount : r.total_ttc)}<span class="unit">${REFUND_SHORT[r.refund_type] || ''}</span></div>
+        </div>`;
+    }
+    const d = row.d;
     const pay = paymentStatus(d);
     const right = pay && pay !== 'paye'
       ? `<div class="qty bad">${fmtFCFA(invoiceRemaining(d))}<span class="unit">reste dû</span></div>`
       : `<div class="qty">${fmtFCFA(d.total_ttc)}<span class="unit">${d.doc_type === 'devis' ? 'devis' : 'TTC'}</span></div>`;
     return `
-      <div class="article-row" data-id="${id}">
+      <div class="article-row" data-kind="doc" data-id="${row.id}">
         <div class="info">
           <div class="name">${escapeHtml(docLabel(d))}</div>
           <div class="meta">${escapeHtml(d.customer_name || 'Client non renseigné')} · ${fmtDate(d.issue_date || d.created_at)} ${docBadges(d)}</div>
@@ -1084,8 +1110,8 @@ function renderSalesDocs() {
         ${right}
       </div>`;
   }).join('');
-  host.querySelectorAll('.article-row').forEach(row => {
-    row.addEventListener('click', () => openDocumentView(row.dataset.id));
+  host.querySelectorAll('.article-row').forEach(el => {
+    el.addEventListener('click', () => el.dataset.kind === 'ret' ? openReturnView(el.dataset.id) : openDocumentView(el.dataset.id));
   });
 }
 document.getElementById('docFilter')?.addEventListener('change', renderSalesDocs);
@@ -1285,6 +1311,7 @@ function openDocumentView(id) {
   if (isQuote && ['en_attente', 'accepte'].includes(d.status)) actions.push(['convert', 'Convertir en facture', 'primary']);
   if (!isQuote && d.status === 'brouillon') actions.push(['issue', 'Émettre la facture', 'primary']);
   if (!isQuote && d.status === 'emise' && remaining > 0) actions.push(['pay', 'Enregistrer un paiement', 'primary']);
+  if (!isQuote && d.status === 'emise') actions.push(['return', 'Enregistrer un retour', 'ghost']);
   actions.push(['print', 'Imprimer / PDF', 'ghost']);
   if ((isQuote && d.status === 'en_attente') || (!isQuote && d.status === 'brouillon')) actions.push(['edit', 'Modifier', 'ghost']);
   if (isQuote && d.status === 'en_attente') actions.push(['accept', 'Marquer accepté', 'ghost'], ['refuse', 'Marquer refusé', 'ghost']);
@@ -1295,7 +1322,8 @@ function openDocumentView(id) {
     if (inv) actions.push(['goto:' + inv.id, 'Voir la facture', 'ghost']);
   }
   if (!isQuote && d.source_quote_id && salesDocs[d.source_quote_id]) actions.push(['goto:' + d.source_quote_id, 'Voir le devis d\'origine', 'ghost']);
-  if (!isQuote && d.status === 'emise' && manager && (Number(d.amount_paid) || 0) === 0) actions.push(['cancel', 'Annuler la facture', 'ghost']);
+  const linkedReturns = Object.entries(returnsMap).filter(([, r]) => r.source_document_id === id);
+  if (!isQuote && d.status === 'emise' && manager && (Number(d.amount_paid) || 0) === 0 && linkedReturns.length === 0) actions.push(['cancel', 'Annuler la facture', 'ghost']);
   if ((isQuote && d.status !== 'converti') || (!isQuote && d.status === 'brouillon')) actions.push(['delete', 'Supprimer', 'ghost']);
 
   const totalsHtml = d.vat_applicable
@@ -1311,8 +1339,12 @@ function openDocumentView(id) {
         <div class="t">${fmtFCFA(p.amount)}</div></div>`).join('')}</div>`}
     <div class="doc-totals">
       <div><span>Déjà payé</span><span>${fmtFCFA(d.amount_paid)}</span></div>
+      ${(Number(d.credited_amount) || 0) > 0 ? `<div><span>Déduit par avoir</span><span>${fmtFCFA(d.credited_amount)}</span></div>` : ''}
       <div class="${remaining > 0 ? 'due' : ''}"><span>Reste à payer</span><span>${fmtFCFA(remaining)}</span></div>
-    </div>` : '';
+    </div>
+    ${linkedReturns.length ? `<h3>Retours sur cette facture</h3><div class="doc-view-lines">${linkedReturns.map(([rid, r]) => `
+      <div class="doc-view-line" data-return="${rid}" style="cursor:pointer"><div class="d">${escapeHtml(r.number)}<small>${fmtDate(r.return_date)} · ${RETURN_REASONS[r.reason_category] || ''} · ${REFUND_LABELS[r.refund_type] || ''}</small></div>
+      <div class="t">${fmtFCFA(r.total_ttc)}</div></div>`).join('')}</div>` : ''}` : '';
   const fneHtml = !isQuote && d.status !== 'brouillon' ? `
     <div class="fne-note">${d.fne_number
       ? `<strong>FNE n° ${escapeHtml(d.fne_number)}</strong> — enregistrée le ${fmtDate(d.fne_recorded_at)}.`
@@ -1358,12 +1390,16 @@ function openDocumentView(id) {
     return data ?? true;
   }
 
+  backdrop.querySelectorAll('[data-return]').forEach(el => {
+    el.addEventListener('click', () => { close(); openReturnView(el.dataset.return); });
+  });
   backdrop.querySelectorAll('[data-action]').forEach(btn => {
     btn.addEventListener('click', async () => {
       const action = btn.dataset.action;
       if (action.startsWith('goto:')) { close(); openDocumentView(action.slice(5)); return; }
       switch (action) {
         case 'print': printDocument(id); break;
+        case 'return': close(); openReturnEditor(id); break;
         case 'edit': close(); openDocumentEditor(d.doc_type, id); break;
         case 'accept': await run('set_quote_status', { p_id: id, p_status: 'accepte' }, 'Devis marqué accepté.'); break;
         case 'refuse': await run('set_quote_status', { p_id: id, p_status: 'refuse' }, 'Devis marqué refusé.'); break;
@@ -1523,8 +1559,10 @@ function buildPrintableHtml(d, s) {
        <div class="grand"><span>Total TTC</span><span>${fmtFCFA(d.total_ttc)}</span></div>`
     : `<div class="grand"><span>Total</span><span>${fmtFCFA(d.total_ttc)}</span></div>
        <div style="font-size:8.5pt;color:#555">TVA non applicable</div>`;
-  const payBlock = !isQuote && d.status === 'emise' && (Number(d.amount_paid) || 0) > 0
+  const paidOrCredited = (Number(d.amount_paid) || 0) > 0 || (Number(d.credited_amount) || 0) > 0;
+  const payBlock = !isQuote && d.status === 'emise' && paidOrCredited
     ? `<div><span>Déjà payé</span><span>${fmtFCFA(d.amount_paid)}</span></div>
+       ${(Number(d.credited_amount) || 0) > 0 ? `<div><span>Déduit par avoir</span><span>${fmtFCFA(d.credited_amount)}</span></div>` : ''}
        <div><span>Reste à payer</span><span>${fmtFCFA(invoiceRemaining(d))}</span></div>` : '';
   let stamp = '';
   if (d.status === 'brouillon') stamp = '<div class="pstamp">BROUILLON — NON ÉMIS</div>';
@@ -1573,6 +1611,397 @@ function printDocument(id) {
 document.getElementById('newQuoteBtn')?.addEventListener('click', () => openDocumentEditor('devis'));
 document.getElementById('newInvoiceBtn')?.addEventListener('click', () => openDocumentEditor('facture'));
 document.getElementById('shopSettingsBtn')?.addEventListener('click', openShopSettingsSheet);
+document.getElementById('newReturnBtn')?.addEventListener('click', () => openReturnEditor(null));
+
+// ---------------------------------------------------------------------------
+// Retours & remboursements (module 5)
+// ---------------------------------------------------------------------------
+const RETURN_REASONS = {
+  defaut: 'Défaut', erreur_commande: 'Erreur de commande', insatisfaction: 'Insatisfaction', autre: 'Autre',
+};
+const REFUND_LABELS = {
+  remboursement: 'Remboursé au client', deduction_facture: 'Déduit de la facture',
+  credit_client: 'Déduit du crédit comptoir', aucun: 'Échange / sans remboursement',
+};
+const REFUND_SHORT = { remboursement: 'remboursé', deduction_facture: 'avoir', credit_client: 'avoir', aucun: 'échange' };
+
+async function loadReturns() {
+  const { data, error } = await supa
+    .from('returns')
+    .select('*, return_lines(*)')
+    .order('created_at', { ascending: false })
+    .limit(500);
+  if (error) { console.error(error); return; }
+  returnsMap = {};
+  (data || []).forEach(r => {
+    r.return_lines = (r.return_lines || []).slice().sort((a, b) => a.position - b.position);
+    returnsMap[r.id] = r;
+  });
+  renderSalesDocs();
+}
+
+// Quantités encore retournables par article d'une facture (retours précédents déduits)
+function returnableByArticle(invoiceId) {
+  const d = salesDocs[invoiceId];
+  const left = {};
+  d.sales_document_lines.forEach(l => { if (l.article_id) left[l.article_id] = (left[l.article_id] || 0) + l.qty; });
+  Object.values(returnsMap).filter(r => r.source_document_id === invoiceId).forEach(r => {
+    r.return_lines.forEach(l => { if (l.article_id && left[l.article_id] != null) left[l.article_id] -= l.qty; });
+  });
+  return left;
+}
+function refundedOnInvoice(invoiceId) {
+  return Object.values(returnsMap)
+    .filter(r => r.source_document_id === invoiceId && r.refund_type === 'remboursement')
+    .reduce((s, r) => s + (Number(r.refund_amount) || 0), 0);
+}
+
+function openReturnEditor(sourceInvoiceId = null) {
+  const inv = sourceInvoiceId ? salesDocs[sourceInvoiceId] : null;
+  let lines;
+  if (inv) {
+    const left = returnableByArticle(sourceInvoiceId);
+    const used = {};
+    lines = inv.sales_document_lines.map(l => {
+      let max = l.qty;
+      if (l.article_id) {
+        // Répartit le reste retournable d'un article sur ses lignes successives
+        const remain = Math.max(0, (left[l.article_id] ?? 0) - (used[l.article_id] || 0));
+        max = Math.min(l.qty, remain);
+        used[l.article_id] = (used[l.article_id] || 0) + max;
+      }
+      return { article_id: l.article_id || '', description: l.description, unit_price_ttc: Number(l.unit_price_ttc), qty: 0, max, restock: !!l.article_id };
+    });
+  } else {
+    lines = [{ article_id: '', description: '', unit_price_ttc: '', qty: 1, restock: true }];
+  }
+
+  const articleOptions = Object.entries(articles)
+    .sort((a, b) => a[1].name.localeCompare(b[1].name, 'fr'))
+    .map(([aid, a]) => `<option value="${aid}">${escapeHtml(a.name)}</option>`).join('');
+  const customerOptions = Object.entries(customers)
+    .sort((a, b) => a[1].name.localeCompare(b[1].name, 'fr'))
+    .map(([cid, c]) => `<option value="${cid}">${escapeHtml(c.name)}</option>`).join('');
+
+  const backdrop = document.createElement('div');
+  backdrop.className = 'sheet-backdrop';
+  backdrop.innerHTML = `
+    <div class="sheet">
+      <div class="sheet-head"><h2>${inv ? `Retour sur ${escapeHtml(inv.number)}` : 'Nouveau retour'}</h2><button class="sheet-close" type="button">✕</button></div>
+      <form id="returnForm">
+        ${inv
+          ? `<div class="doc-meta"><div>Client : <strong>${escapeHtml(inv.customer_name || 'Non renseigné')}</strong></div>
+             <div>Indiquez la quantité retournée pour chaque article (0 = pas retourné).</div></div>`
+          : `<div class="field"><label for="retCustomer">Client</label>
+               <select id="retCustomer"><option value="">— Client non enregistré —</option>${customerOptions}</select></div>
+             <div class="field" id="retCustomerNameField"><label for="retCustomerName">Nom du client (facultatif)</label>
+               <input id="retCustomerName" placeholder="Ex : Client comptoir"></div>`}
+        <div class="doc-lines" id="retLines"></div>
+        ${inv ? '' : '<button type="button" class="btn btn-ghost btn-block" id="addRetLineBtn">+ Ajouter une ligne</button>'}
+        <div class="doc-totals" id="retTotal"></div>
+        <div class="field-row">
+          <div class="field"><label for="retReason">Motif</label>
+            <select id="retReason">${Object.entries(RETURN_REASONS).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></div>
+          <div class="field"><label for="retNote">Précision</label><input id="retNote" placeholder="Facultatif"></div>
+        </div>
+        <div class="field"><label for="retRefundType">Suite donnée</label><select id="retRefundType"></select></div>
+        <div id="retRefundFields">
+          <div class="field"><label for="retAmount">Montant (FCFA)</label><input id="retAmount" type="number" min="0" step="1" inputmode="numeric"></div>
+          <div class="current-stock-hint" id="retAmountHint" style="margin-top:4px"></div>
+        </div>
+        <div class="field-row" id="retMethodFields">
+          <div class="field"><label for="retMethod">Moyen de remboursement</label>
+            <select id="retMethod">${Object.entries(PAY_METHODS).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></div>
+          <div class="field"><label for="retRef">Référence</label><input id="retRef" placeholder="N° de transaction"></div>
+        </div>
+        <p class="sheet-error" id="retError"></p>
+        <button type="submit" class="btn btn-primary btn-block">Enregistrer le retour</button>
+      </form>
+    </div>`;
+  document.body.appendChild(backdrop);
+  const close = () => backdrop.remove();
+  backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(); });
+  backdrop.querySelector('.sheet-close').addEventListener('click', close);
+
+  const custSel = document.getElementById('retCustomer');
+  if (custSel) {
+    custSel.addEventListener('change', () => {
+      document.getElementById('retCustomerNameField').hidden = !!custSel.value;
+      renderRefundOptions();
+    });
+  }
+
+  const lineValue = (l) => Math.round((Number(l.qty) || 0) * (Number(l.unit_price_ttc) || 0));
+  const totalValue = () => lines.reduce((s, l) => s + lineValue(l), 0);
+  let amountEdited = false;
+
+  function refundLimits() {
+    const total = totalValue();
+    const lim = {};
+    if (inv) {
+      lim.deduction_facture = Math.min(total, invoiceRemaining(inv));
+      lim.remboursement = Math.min(total, Math.max(0, (Number(inv.amount_paid) || 0) - refundedOnInvoice(inv.id)));
+    } else {
+      lim.remboursement = total;
+      const c = custSel?.value ? customers[custSel.value] : null;
+      if (c && (Number(c.credit_balance) || 0) > 0) lim.credit_client = Math.min(total, Number(c.credit_balance));
+    }
+    return lim;
+  }
+
+  function renderRefundOptions() {
+    const sel = document.getElementById('retRefundType');
+    const prev = sel.value;
+    const lim = refundLimits();
+    const opts = [];
+    if (inv && invoiceRemaining(inv) > 0) opts.push(['deduction_facture', `Déduire du reste à payer de la facture (${fmtFCFA(invoiceRemaining(inv))})`]);
+    if (!inv || lim.remboursement > 0 || (Number(inv.amount_paid) || 0) > refundedOnInvoice(inv.id)) opts.push(['remboursement', 'Rembourser le client']);
+    if (!inv && custSel?.value && (Number(customers[custSel.value]?.credit_balance) || 0) > 0) {
+      opts.push(['credit_client', `Déduire de son crédit comptoir (${fmtFCFA(customers[custSel.value].credit_balance)})`]);
+    }
+    opts.push(['aucun', 'Échange / sans remboursement']);
+    sel.innerHTML = opts.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
+    if (opts.some(([v]) => v === prev)) sel.value = prev;
+    syncRefundFields();
+  }
+
+  function syncRefundFields() {
+    const type = document.getElementById('retRefundType').value;
+    const lim = refundLimits()[type];
+    document.getElementById('retRefundFields').hidden = type === 'aucun';
+    document.getElementById('retMethodFields').hidden = type !== 'remboursement';
+    const amount = document.getElementById('retAmount');
+    if (!amountEdited) amount.value = lim != null ? lim : totalValue();
+    const hints = {
+      deduction_facture: `Maximum : ${fmtFCFA(lim ?? 0)} (valeur retournée, dans la limite du reste à payer).`,
+      remboursement: inv
+        ? `Maximum : ${fmtFCFA(lim ?? 0)} (valeur retournée, dans la limite de ce que le client a payé).`
+        : `Maximum : ${fmtFCFA(lim ?? 0)} (valeur des articles retournés).`,
+      credit_client: `Maximum : ${fmtFCFA(lim ?? 0)} (dans la limite de son crédit comptoir).`,
+    };
+    document.getElementById('retAmountHint').textContent = hints[type] || '';
+  }
+  document.getElementById('retRefundType').addEventListener('change', () => { amountEdited = false; syncRefundFields(); });
+  document.getElementById('retAmount').addEventListener('input', () => { amountEdited = true; });
+
+  function renderTotal() {
+    const restocked = lines.filter(l => l.restock && l.article_id && Number(l.qty) > 0).reduce((s, l) => s + Number(l.qty), 0);
+    document.getElementById('retTotal').innerHTML =
+      `<div class="grand"><span>Valeur retournée</span><span>${fmtFCFA(totalValue())}</span></div>
+       <div><span>Articles remis en stock</span><span>${restocked}</span></div>`;
+    syncRefundFields();
+  }
+
+  function renderLines() {
+    const host = document.getElementById('retLines');
+    host.innerHTML = lines.map((l, i) => inv ? `
+      <div class="doc-line" data-idx="${i}">
+        <div class="full"><strong>${escapeHtml(l.description)}</strong>
+          <div class="current-stock-hint">${fmtFCFA(l.unit_price_ttc)} l'unité · retournable : ${l.max}</div></div>
+        <label>Quantité retournée<input data-f="qty" type="number" min="0" max="${l.max}" step="1" inputmode="numeric" value="${l.qty}" ${l.max === 0 ? 'disabled' : ''}></label>
+        <label class="check-line" style="flex-direction:row; align-self:end; padding-bottom:8px">
+          <input type="checkbox" data-f="restock" ${l.restock ? 'checked' : ''} ${l.article_id ? '' : 'disabled'}> Remettre en stock</label>
+      </div>` : `
+      <div class="doc-line" data-idx="${i}">
+        <label class="full">Article
+          <select data-f="article_id"><option value="">— Ligne libre —</option>${articleOptions}</select></label>
+        <label class="full">Désignation<input data-f="description" value="${escapeHtml(l.description)}"></label>
+        <label>Quantité<input data-f="qty" type="number" min="1" step="1" inputmode="numeric" value="${l.qty}"></label>
+        <label>Prix unitaire TTC<input data-f="unit_price_ttc" type="number" min="0" step="1" inputmode="numeric" value="${l.unit_price_ttc}"></label>
+        <div class="line-foot">
+          <label class="check-line" style="flex-direction:row"><input type="checkbox" data-f="restock" ${l.restock ? 'checked' : ''}> Remettre en stock</label>
+          <button type="button" class="remove-line" ${lines.length === 1 ? 'hidden' : ''}>Retirer</button>
+        </div>
+      </div>`).join('');
+
+    host.querySelectorAll('.doc-line').forEach(row => {
+      const i = Number(row.dataset.idx);
+      const q = row.querySelector('[data-f="qty"]');
+      q?.addEventListener('input', () => {
+        let v = parseInt(q.value, 10) || 0;
+        if (inv && v > lines[i].max) { v = lines[i].max; q.value = v; }
+        lines[i].qty = v; renderTotal();
+      });
+      row.querySelector('[data-f="restock"]')?.addEventListener('change', (e) => { lines[i].restock = e.target.checked; renderTotal(); });
+      const sel = row.querySelector('[data-f="article_id"]');
+      if (sel) {
+        sel.value = lines[i].article_id || '';
+        sel.addEventListener('change', () => {
+          lines[i].article_id = sel.value;
+          const a = articles[sel.value];
+          if (a) {
+            lines[i].description = a.name;
+            lines[i].unit_price_ttc = Number(a.sell_price) || 0;
+            row.querySelector('[data-f="description"]').value = lines[i].description;
+            row.querySelector('[data-f="unit_price_ttc"]').value = lines[i].unit_price_ttc;
+          }
+          renderTotal();
+        });
+      }
+      row.querySelector('[data-f="description"]')?.addEventListener('input', (e) => { lines[i].description = e.target.value; });
+      row.querySelector('[data-f="unit_price_ttc"]')?.addEventListener('input', (e) => { lines[i].unit_price_ttc = e.target.value; renderTotal(); });
+      row.querySelector('.remove-line')?.addEventListener('click', () => { lines.splice(i, 1); renderLines(); });
+    });
+    renderTotal();
+  }
+  document.getElementById('addRetLineBtn')?.addEventListener('click', () => {
+    lines.push({ article_id: '', description: '', unit_price_ttc: '', qty: 1, restock: true });
+    renderLines();
+  });
+  renderLines();
+  renderRefundOptions();
+
+  document.getElementById('returnForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errEl = document.getElementById('retError');
+    errEl.textContent = '';
+    const cleaned = lines
+      .filter(l => (Number(l.qty) || 0) > 0 && (l.article_id || String(l.description).trim()))
+      .map(l => ({
+        article_id: l.article_id || null,
+        description: String(l.description || '').trim(),
+        qty: parseInt(l.qty, 10),
+        unit_price_ttc: Number(l.unit_price_ttc) || 0,
+        restock: !!l.restock && !!l.article_id,
+      }));
+    if (cleaned.length === 0) { errEl.textContent = inv ? 'Indiquez au moins une quantité retournée.' : 'Ajoutez au moins une ligne.'; return; }
+    const type = document.getElementById('retRefundType').value;
+    const amount = type === 'aucun' ? 0 : Number(document.getElementById('retAmount').value);
+    if (type !== 'aucun' && !(amount > 0)) { errEl.textContent = 'Indiquez un montant positif.'; return; }
+    if (!navigator.onLine) { errEl.textContent = 'Les retours nécessitent une connexion internet.'; return; }
+
+    const btn = e.target.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    try {
+      const { data: retId, error } = await supa.rpc('create_return', {
+        p_source_document_id: inv ? inv.id : null,
+        p_customer_id: !inv && custSel?.value ? custSel.value : null,
+        p_customer_name: !inv && !custSel?.value ? document.getElementById('retCustomerName').value : null,
+        p_lines: cleaned,
+        p_reason_category: document.getElementById('retReason').value,
+        p_reason_note: document.getElementById('retNote').value,
+        p_refund_type: type,
+        p_refund_amount: amount,
+        p_refund_method: type === 'remboursement' ? document.getElementById('retMethod').value : null,
+        p_refund_reference: type === 'remboursement' ? document.getElementById('retRef').value : null,
+      });
+      if (error) throw error;
+      markActivity();
+      await Promise.all([loadReturns(), loadSalesDocuments(), loadCustomers()]);
+      loadArticles(); loadMovements();
+      close();
+      toast('Retour enregistré.');
+      openReturnView(retId);
+    } catch (err) {
+      console.error(err);
+      errEl.textContent = err.message || "Erreur lors de l'enregistrement.";
+      btn.disabled = false;
+    }
+  });
+}
+
+function openReturnView(id) {
+  const r = returnsMap[id];
+  if (!r) return;
+  const src = salesDocs[r.source_document_id];
+  const backdrop = document.createElement('div');
+  backdrop.className = 'sheet-backdrop';
+  const refundLine = r.refund_type === 'aucun'
+    ? 'Échange / sans remboursement'
+    : `${REFUND_LABELS[r.refund_type]} : <strong>${fmtFCFA(r.refund_amount)}</strong>${r.refund_method ? ' · ' + (PAY_METHODS[r.refund_method] || r.refund_method) : ''}${r.refund_reference ? ' · Réf. ' + escapeHtml(r.refund_reference) : ''}`;
+  backdrop.innerHTML = `
+    <div class="sheet">
+      <div class="sheet-head"><h2>Retour ${escapeHtml(r.number)}</h2><button class="sheet-close" type="button">✕</button></div>
+      <div><span class="doc-badge accent">Retour</span> <span class="doc-badge">${RETURN_REASONS[r.reason_category]}</span>${r.fne_number ? ' <span class="doc-badge ok">FNE</span>' : ''}</div>
+      <div class="doc-meta">
+        <div>Client : <strong>${escapeHtml(r.customer_name || 'Non renseigné')}</strong></div>
+        <div>Date : <strong>${fmtDate(r.return_date)}</strong>${src ? ` · Facture d'origine <strong>${escapeHtml(src.number || '')}</strong>` : ' · Vente au comptoir'}</div>
+        ${r.reason_note ? `<div>Précision : ${escapeHtml(r.reason_note)}</div>` : ''}
+      </div>
+      <div class="doc-view-lines">${r.return_lines.map(l => `
+        <div class="doc-view-line"><div class="d">${escapeHtml(l.description)}<small>${l.qty} × ${fmtFCFA(l.unit_price_ttc)} · ${l.restock ? 'remis en stock' : 'non remis en stock'}</small></div>
+        <div class="t">${fmtFCFA(l.line_total_ttc)}</div></div>`).join('')}</div>
+      <div class="doc-totals">
+        <div class="grand"><span>Valeur retournée</span><span>${fmtFCFA(r.total_ttc)}</span></div>
+        <div><span style="font-family:var(--font-body)">${refundLine}</span><span></span></div>
+      </div>
+      ${r.refund_type !== 'aucun' ? `<div class="fne-note">${r.fne_number
+        ? `<strong>Avoir FNE n° ${escapeHtml(r.fne_number)}</strong> — enregistré le ${fmtDate(r.fne_recorded_at)}.`
+        : `Si la vente d'origine a fait l'objet d'une FNE, l'avoir correspondant doit aussi être émis sur la plateforme de la DGI ; renseignez ensuite son numéro ici.`}</div>` : ''}
+      <div style="display:flex; flex-direction:column; gap:8px">
+        <button type="button" class="btn btn-ghost btn-block" data-action="print">Imprimer / PDF</button>
+        ${src ? `<button type="button" class="btn btn-ghost btn-block" data-action="source">Voir la facture d'origine</button>` : ''}
+        ${canManageInvoices() && r.refund_type !== 'aucun' ? `<button type="button" class="btn btn-ghost btn-block" data-action="fne">${r.fne_number ? 'Modifier le n° d\'avoir FNE' : 'Renseigner le n° d\'avoir FNE'}</button>` : ''}
+      </div>
+    </div>`;
+  document.body.appendChild(backdrop);
+  const close = () => backdrop.remove();
+  backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(); });
+  backdrop.querySelector('.sheet-close').addEventListener('click', close);
+  backdrop.querySelectorAll('[data-action]').forEach(btn => btn.addEventListener('click', () => {
+    const a = btn.dataset.action;
+    if (a === 'print') printReturn(id);
+    if (a === 'source') { close(); openDocumentView(r.source_document_id); }
+    if (a === 'fne') {
+      close();
+      openFormSheet({
+        title: 'Numéro d\'avoir FNE',
+        intro: 'Saisissez le numéro de l\'avoir émis sur la plateforme de la DGI. Laissez vide pour retirer le lien.',
+        fields: [{ id: 'fne', label: 'N° avoir FNE', value: r.fne_number || '' }],
+        submitLabel: 'Enregistrer',
+        onSubmit: async (v) => {
+          const { error } = await supa.rpc('set_return_fne', { p_id: id, p_fne_number: v.fne });
+          if (error) throw error;
+          await loadReturns();
+          toast('Numéro enregistré.');
+          setTimeout(() => openReturnView(id), 0);
+        },
+      });
+    }
+  }));
+}
+
+function printReturn(id) {
+  const r = returnsMap[id];
+  if (!r) return;
+  const s = shopInfo || {};
+  const src = salesDocs[r.source_document_id];
+  const isCredit = r.refund_type !== 'aucun';
+  const shopName = s.legal_name || s.name || 'Boutique';
+  const idLines = [
+    s.address ? escapeHtml(s.address) : '',
+    [s.phone, s.email].filter(Boolean).map(escapeHtml).join(' · '),
+    [s.ncc ? `NCC : ${escapeHtml(s.ncc)}` : '', s.rccm ? `RCCM : ${escapeHtml(s.rccm)}` : ''].filter(Boolean).join(' · '),
+  ].filter(Boolean).map(x => `<div>${x}</div>`).join('');
+  document.getElementById('printArea').innerHTML = `
+    <div class="pdoc">
+      <div class="phead">
+        <div class="pshop"><h1>${escapeHtml(shopName)}</h1>${idLines}</div>
+        <div class="pinfo">
+          <div class="ptitle">${isCredit ? 'AVOIR' : 'BON DE RETOUR'}</div>
+          <div><strong>N° ${escapeHtml(r.number)}</strong></div>
+          <div>Date : ${fmtDate(r.return_date)}</div>
+          ${src ? `<div>Facture d'origine : ${escapeHtml(src.number || '')}</div>` : ''}
+        </div>
+      </div>
+      <div class="pclient"><div class="lbl">Client</div><div><strong>${escapeHtml(r.customer_name || 'Client')}</strong></div></div>
+      <table>
+        <thead><tr><th>Désignation</th><th class="n">Qté</th><th class="n">Prix unit. TTC</th><th class="n">Total TTC</th></tr></thead>
+        <tbody>${r.return_lines.map(l => `<tr><td>${escapeHtml(l.description)}</td><td class="n">${l.qty}</td><td class="n">${fmtFCFA(l.unit_price_ttc)}</td><td class="n">${fmtFCFA(l.line_total_ttc)}</td></tr>`).join('')}</tbody>
+      </table>
+      <div class="ptotals">
+        <div class="grand"><span>Valeur retournée</span><span>${fmtFCFA(r.total_ttc)}</span></div>
+        ${isCredit ? `<div><span>${REFUND_LABELS[r.refund_type]}</span><span>${fmtFCFA(r.refund_amount)}</span></div>` : ''}
+        ${r.refund_method ? `<div><span>Moyen</span><span>${PAY_METHODS[r.refund_method] || r.refund_method}</span></div>` : ''}
+      </div>
+      <div class="pnotes"><strong>Motif :</strong> ${RETURN_REASONS[r.reason_category]}${r.reason_note ? ' — ' + escapeHtml(r.reason_note) : ''}</div>
+      <div class="plegal">${r.fne_number
+        ? `Avoir rattaché à l'avoir FNE n° ${escapeHtml(r.fne_number)} émis via la plateforme de la DGI.`
+        : `Document de gestion interne.${isCredit ? ' L\'avoir fiscal opposable est celui émis via la plateforme FNE de la DGI.' : ''}`}
+        ${s.invoice_footer ? `<div style="margin-top:4px">${escapeHtml(s.invoice_footer)}</div>` : ''}</div>
+    </div>`;
+  setTimeout(() => window.print(), 50);
+}
 
 // ---------------------------------------------------------------------------
 // Tableau de bord — indicateurs du jour et des 7 derniers jours, construits
@@ -2557,6 +2986,7 @@ function enterAppWithProfile() {
   loadCustomers();
   loadShopInfo();
   loadSalesDocuments();
+  loadReturns();
   updateOnlineStatus();
   updatePendingBadge();
   syncPendingMovements();
@@ -2605,6 +3035,7 @@ function subscribeRealtime() {
   salesDocsChannel = supa.channel('public:sales_documents')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'sales_documents' }, loadSalesDocuments)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'invoice_payments' }, loadSalesDocuments)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'returns' }, () => { loadReturns(); loadSalesDocuments(); })
     .subscribe();
 }
 
