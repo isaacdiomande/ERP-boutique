@@ -346,6 +346,7 @@ form { display: flex; flex-direction: column; gap: 14px; }
     <button class="tab-btn" data-tab="historique">Historique</button>
     <button class="tab-btn" data-tab="clients" id="clientsTabBtn">Clients</button>
     <button class="tab-btn" data-tab="ventes" id="ventesTabBtn">Ventes</button>
+    <button class="tab-btn" data-tab="achats" id="achatsTabBtn" hidden>Achats</button>
     <button class="tab-btn" data-tab="articles" id="articlesTabBtn">Articles</button>
   </nav>
 
@@ -397,6 +398,25 @@ form { display: flex; flex-direction: column; gap: 14px; }
       </select>
     </div>
     <button class="btn btn-ghost btn-block" id="shopSettingsBtn" hidden>⚙ Infos boutique (en-tête des documents)</button>
+  </div>
+
+  <div class="fixed-tab-panel" id="fixedPanel-achats" hidden>
+    <div class="tiles" id="purchaseTiles"></div>
+    <div class="btn-row">
+      <button class="btn btn-ghost" id="newPoBtn">+ Bon de commande</button>
+      <button class="btn btn-ghost" id="newSupplierBtn">+ Fournisseur</button>
+    </div>
+    <div class="searchbar">
+      <input type="search" id="poSearchInput" placeholder="N°, fournisseur…">
+      <select id="poFilter">
+        <option value="">Tous les bons</option>
+        <option value="a_recevoir">À recevoir</option>
+        <option value="a_payer">Dettes à payer</option>
+        <option value="retard">Paiements en retard</option>
+        <option value="brouillons">Brouillons</option>
+        <option value="fournisseurs">Fournisseurs</option>
+      </select>
+    </div>
   </div>
 
   <div class="fixed-tab-panel" id="fixedPanel-articles" hidden>
@@ -459,6 +479,10 @@ form { display: flex; flex-direction: column; gap: 14px; }
 
   <section id="tab-ventes" hidden>
     <div class="article-list" id="docList"></div>
+  </section>
+
+  <section id="tab-achats" hidden>
+    <div class="article-list" id="poList"></div>
   </section>
 
   <section id="tab-articles" hidden>
@@ -561,6 +585,9 @@ let salesDocs = {};  // id -> document (devis/facture) avec .sales_document_line
 let shopInfo = null; // ligne `shops` de la boutique courante (en-tête, TVA)
 let salesDocsChannel = null;
 let returnsMap = {};  // id -> retour avec .return_lines
+let suppliersMap = {};    // id -> fournisseur
+let purchaseOrders = {};  // id -> bon de commande avec .purchase_order_lines et .supplier_payments
+let purchasingChannel = null;
 let currentTab = 'dashboard';
 let currentProfile = null; // {role, display_name, email}
 let articlesChannel = null;
@@ -608,7 +635,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     currentTab = btn.dataset.tab;
-    ['dashboard', 'stock', 'historique', 'clients', 'ventes', 'articles'].forEach(t => {
+    ['dashboard', 'stock', 'historique', 'clients', 'ventes', 'achats', 'articles'].forEach(t => {
       document.getElementById('tab-' + t).hidden = (t !== currentTab);
       document.getElementById('fixedPanel-' + t).hidden = (t !== currentTab);
     });
@@ -737,6 +764,7 @@ function renderAll() {
   renderArticlesManage();
   renderCustomers();
   renderSalesDocs();
+  renderPurchasing();
   renderDashboard();
 }
 
@@ -1614,6 +1642,525 @@ document.getElementById('shopSettingsBtn')?.addEventListener('click', openShopSe
 document.getElementById('newReturnBtn')?.addEventListener('click', () => openReturnEditor(null));
 
 // ---------------------------------------------------------------------------
+// Achats & fournisseurs (module 7)
+// Dette d'un bon = valeur reçue - payé ; les acomptes avant livraison sont
+// possibles (jamais plus que le total commandé). Réception réservée au
+// propriétaire / gérant ; le comptable voit et paie.
+// ---------------------------------------------------------------------------
+const PO_STATUS = {
+  brouillon: { label: 'Brouillon', cls: '' },
+  commande:  { label: 'Commandé', cls: 'warn' },
+  partiel:   { label: 'Reçu partiellement', cls: 'accent' },
+  recu:      { label: 'Reçu', cls: 'ok' },
+  annule:    { label: 'Annulé', cls: 'bad' },
+};
+function poDebt(po) {
+  if (po.status === 'brouillon' || po.status === 'annule') return 0;
+  return Math.max(0, (Number(po.received_value) || 0) - (Number(po.amount_paid) || 0));
+}
+function poToPay(po) {
+  if (po.status === 'brouillon' || po.status === 'annule') return 0;
+  return Math.max(0, (Number(po.total) || 0) - (Number(po.amount_paid) || 0));
+}
+function poOverdue(po) {
+  if (!po.due_date || poDebt(po) <= 0) return false;
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  return new Date(po.due_date + 'T00:00:00') < today;
+}
+function canReceive() {
+  return currentProfile && ['owner', 'gerant'].includes(currentProfile.role);
+}
+function supplierDebt(supplierId) {
+  return Object.values(purchaseOrders).filter(po => po.supplier_id === supplierId).reduce((s, po) => s + poDebt(po), 0);
+}
+
+async function loadPurchasing() {
+  if (!canManageInvoices()) { suppliersMap = {}; purchaseOrders = {}; return; }
+  const [sup, pos] = await Promise.all([
+    supa.from('suppliers').select('*').order('name'),
+    supa.from('purchase_orders').select('*, purchase_order_lines(*), supplier_payments(*)').order('created_at', { ascending: false }).limit(500),
+  ]);
+  if (sup.error) console.error(sup.error);
+  if (pos.error) console.error(pos.error);
+  suppliersMap = {};
+  (sup.data || []).forEach(s => { suppliersMap[s.id] = s; });
+  purchaseOrders = {};
+  (pos.data || []).forEach(po => {
+    po.purchase_order_lines = (po.purchase_order_lines || []).slice().sort((a, b) => a.position - b.position);
+    po.supplier_payments = (po.supplier_payments || []).slice().sort((a, b) => new Date(a.paid_at) - new Date(b.paid_at));
+    purchaseOrders[po.id] = po;
+  });
+  renderPurchasing();
+  renderDashboard();
+}
+
+function renderPurchasing() {
+  const host = document.getElementById('poList');
+  if (!host) return;
+  const all = Object.values(purchaseOrders);
+  const debt = all.reduce((s, po) => s + poDebt(po), 0);
+  const toReceive = all.filter(po => po.status === 'commande' || po.status === 'partiel').length;
+  const late = all.filter(poOverdue);
+  document.getElementById('purchaseTiles').innerHTML = `
+    <div class="tile"><div class="label">Dettes fournisseurs</div><div class="value small">${fmtFCFA(debt)}</div></div>
+    <div class="tile"><div class="label">À recevoir</div><div class="value">${toReceive}</div></div>
+    <div class="tile"><div class="label">En retard</div><div class="value ${late.length ? 'small' : ''}" style="${late.length ? 'color:var(--bad)' : ''}">${late.length ? fmtFCFA(late.reduce((s, po) => s + poDebt(po), 0)) : '0'}</div></div>`;
+
+  const filter = document.getElementById('poFilter')?.value || '';
+  const search = (document.getElementById('poSearchInput')?.value || '').trim().toLowerCase();
+
+  if (filter === 'fournisseurs') {
+    let list = Object.entries(suppliersMap).sort((a, b) => a[1].name.localeCompare(b[1].name, 'fr'));
+    if (search) list = list.filter(([, s]) => s.name.toLowerCase().includes(search) || (s.phone || '').includes(search));
+    host.innerHTML = list.length === 0
+      ? `<div class="empty-state">${Object.keys(suppliersMap).length ? 'Aucun fournisseur trouvé.' : 'Aucun fournisseur. Ajoutez le premier ci-dessus.'}</div>`
+      : list.map(([id, s]) => {
+          const d = supplierDebt(id);
+          return `<div class="article-row" data-sup="${id}">
+            <div class="info"><div class="name">${escapeHtml(s.name)}</div>
+              <div class="meta">${escapeHtml(s.phone || 'Pas de téléphone')}${s.payment_terms_days ? ` · paiement à ${s.payment_terms_days} j` : ' · paiement comptant'}</div></div>
+            <div class="qty ${d > 0 ? 'bad' : 'good'}">${d > 0 ? fmtFCFA(d) + '<span class="unit">dette</span>' : 'À jour'}</div>
+          </div>`;
+        }).join('');
+    host.querySelectorAll('[data-sup]').forEach(el => el.addEventListener('click', () => openSupplierSheet(el.dataset.sup)));
+    return;
+  }
+
+  let list = Object.entries(purchaseOrders);
+  if (filter === 'a_recevoir') list = list.filter(([, po]) => po.status === 'commande' || po.status === 'partiel');
+  if (filter === 'a_payer') list = list.filter(([, po]) => poDebt(po) > 0);
+  if (filter === 'retard') list = list.filter(([, po]) => poOverdue(po));
+  if (filter === 'brouillons') list = list.filter(([, po]) => po.status === 'brouillon');
+  if (search) list = list.filter(([, po]) => (po.number || '').toLowerCase().includes(search) || (po.supplier_name || '').toLowerCase().includes(search) || (po.supplier_ref || '').toLowerCase().includes(search));
+  if (list.length === 0) {
+    host.innerHTML = `<div class="empty-state">${Object.keys(purchaseOrders).length ? 'Aucun bon de commande ne correspond.' : (Object.keys(suppliersMap).length ? 'Aucun bon de commande. Créez le premier ci-dessus.' : 'Commencez par ajouter un fournisseur, puis créez un bon de commande.')}</div>`;
+    return;
+  }
+  host.innerHTML = list.map(([id, po]) => {
+    const st = PO_STATUS[po.status] || { label: po.status, cls: '' };
+    const d = poDebt(po);
+    return `<div class="article-row" data-po="${id}">
+      <div class="info"><div class="name">${escapeHtml(po.number || 'Bon de commande (brouillon)')}</div>
+        <div class="meta">${escapeHtml(po.supplier_name || '—')} · ${fmtDate(po.order_date || po.created_at)}
+          <span class="doc-badge ${st.cls}">${st.label}</span>${poOverdue(po) ? ' <span class="doc-badge bad">En retard</span>' : ''}</div></div>
+      ${d > 0
+        ? `<div class="qty bad">${fmtFCFA(d)}<span class="unit">dette</span></div>`
+        : `<div class="qty">${fmtFCFA(po.total)}<span class="unit">commandé</span></div>`}
+    </div>`;
+  }).join('');
+  host.querySelectorAll('[data-po]').forEach(el => el.addEventListener('click', () => openPurchaseOrderView(el.dataset.po)));
+}
+document.getElementById('poFilter')?.addEventListener('change', renderPurchasing);
+document.getElementById('poSearchInput')?.addEventListener('input', renderPurchasing);
+
+// ---- Fournisseurs
+function openSupplierSheet(id = null) {
+  const s = id ? suppliersMap[id] : null;
+  const pos = id ? Object.values(purchaseOrders).filter(po => po.supplier_id === id) : [];
+  const backdrop = openFormSheet({
+    title: s ? 'Fournisseur' : 'Nouveau fournisseur',
+    intro: s ? `Dette actuelle : <strong>${fmtFCFA(supplierDebt(id))}</strong> · ${pos.filter(p => p.status !== 'brouillon').length} commande(s)` : '',
+    fields: [
+      { id: 'name', label: 'Nom', value: s?.name || '', required: true, placeholder: 'Ex : Grossiste Adjamé' },
+      { id: 'contact_name', label: 'Contact', value: s?.contact_name || '' },
+      { id: 'phone', label: 'Téléphone', value: s?.phone || '' },
+      { id: 'email', label: 'Email', type: 'email', value: s?.email || '' },
+      { id: 'address', label: 'Adresse', value: s?.address || '' },
+      { id: 'payment_terms_days', label: 'Délai de paiement habituel (jours)', type: 'number', min: 0, step: 1, value: s?.payment_terms_days ?? 0,
+        hint: '0 = paiement comptant. Sert à calculer l\'échéance quand une commande est passée.' },
+      { id: 'notes', label: 'Notes', type: 'textarea', value: s?.notes || '' },
+    ],
+    submitLabel: s ? 'Enregistrer' : 'Ajouter le fournisseur',
+    onSubmit: async (v) => {
+      if (!v.name.trim()) throw new Error('Le nom est obligatoire.');
+      const payload = {
+        name: v.name.trim(), contact_name: v.contact_name.trim() || null, phone: v.phone.trim() || null,
+        email: v.email.trim() || null, address: v.address.trim() || null,
+        payment_terms_days: Math.max(0, parseInt(v.payment_terms_days, 10) || 0), notes: v.notes.trim() || null,
+      };
+      const { error } = s
+        ? await supa.from('suppliers').update(payload).eq('id', id)
+        : await supa.from('suppliers').insert({ ...payload, shop_id: currentProfile.shop_id });
+      if (error) throw error;
+      await loadPurchasing();
+      toast('Fournisseur enregistré.');
+    },
+  });
+  if (s && canReceive()) {
+    const form = backdrop.querySelector('form');
+    const del = document.createElement('button');
+    del.type = 'button'; del.className = 'btn btn-ghost btn-block'; del.textContent = 'Supprimer le fournisseur';
+    del.addEventListener('click', async () => {
+      if (pos.some(p => p.status !== 'brouillon' && p.status !== 'annule' && (poDebt(p) > 0 || p.status !== 'recu'))) {
+        toast('Ce fournisseur a des commandes en cours ou une dette : impossible de le supprimer.');
+        return;
+      }
+      const { error } = await supa.from('suppliers').delete().eq('id', id);
+      if (error) { toast(error.message); return; }
+      backdrop.remove();
+      await loadPurchasing();
+      toast('Fournisseur supprimé.');
+    });
+    form.appendChild(del);
+  }
+}
+
+// ---- Éditeur de bon de commande
+function openPurchaseOrderEditor(id = null) {
+  if (Object.keys(suppliersMap).length === 0) {
+    toast("Ajoutez d'abord un fournisseur.");
+    openSupplierSheet(null);
+    return;
+  }
+  const po = id ? purchaseOrders[id] : null;
+  let lines = po
+    ? po.purchase_order_lines.map(l => ({ article_id: l.article_id || '', description: l.description, qty: l.qty_ordered, unit_cost: Number(l.unit_cost) }))
+    : [{ article_id: '', description: '', qty: 1, unit_cost: '' }];
+  const supplierOptions = Object.entries(suppliersMap).sort((a, b) => a[1].name.localeCompare(b[1].name, 'fr'))
+    .map(([sid, s]) => `<option value="${sid}" ${po?.supplier_id === sid ? 'selected' : ''}>${escapeHtml(s.name)}</option>`).join('');
+  const articleOptions = Object.entries(articles).sort((a, b) => a[1].name.localeCompare(b[1].name, 'fr'))
+    .map(([aid, a]) => `<option value="${aid}">${escapeHtml(a.name)} (${a.qty ?? 0} en stock)</option>`).join('');
+
+  const backdrop = document.createElement('div');
+  backdrop.className = 'sheet-backdrop';
+  backdrop.innerHTML = `
+    <div class="sheet">
+      <div class="sheet-head"><h2>${po ? 'Modifier le bon de commande' : 'Nouveau bon de commande'}</h2><button class="sheet-close" type="button">✕</button></div>
+      <form id="poForm">
+        <div class="field"><label for="poSupplier">Fournisseur</label><select id="poSupplier" required>${supplierOptions}</select></div>
+        <div class="doc-lines" id="poLines"></div>
+        <button type="button" class="btn btn-ghost btn-block" id="addPoLineBtn">+ Ajouter une ligne</button>
+        <div class="doc-totals" id="poTotal"></div>
+        <div class="field-row">
+          <div class="field"><label for="poExpected">Livraison prévue</label><input id="poExpected" type="date" value="${po?.expected_date || ''}"></div>
+          <div class="field"><label for="poDue">Échéance de paiement</label><input id="poDue" type="date" value="${po?.due_date || ''}"></div>
+        </div>
+        <div class="current-stock-hint" id="poDueHint"></div>
+        <div class="field"><label for="poRef">Réf. facture / proforma fournisseur</label><input id="poRef" value="${escapeHtml(po?.supplier_ref || '')}" placeholder="Facultatif"></div>
+        <div class="field"><label for="poNotes">Notes</label><textarea id="poNotes">${escapeHtml(po?.notes || '')}</textarea></div>
+        <p class="sheet-error" id="poError"></p>
+        <button type="submit" class="btn btn-primary btn-block">Enregistrer le brouillon</button>
+        <button type="button" class="btn btn-ghost btn-block" id="poSavePlaceBtn">Enregistrer et passer la commande</button>
+      </form>
+    </div>`;
+  document.body.appendChild(backdrop);
+  const close = () => backdrop.remove();
+  backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(); });
+  backdrop.querySelector('.sheet-close').addEventListener('click', close);
+
+  const supSel = document.getElementById('poSupplier');
+  const dueHint = () => {
+    const s = suppliersMap[supSel.value];
+    document.getElementById('poDueHint').textContent = s?.payment_terms_days
+      ? `Si l'échéance est vide, elle sera fixée à ${s.payment_terms_days} jours après la commande (délai habituel de ce fournisseur).`
+      : "Si l'échéance est vide, le paiement sera attendu le jour de la commande (comptant).";
+  };
+  supSel.addEventListener('change', dueHint);
+  dueHint();
+
+  const total = () => lines.reduce((s, l) => s + Math.round((Number(l.qty) || 0) * (Number(l.unit_cost) || 0)), 0);
+  const renderTotal = () => { document.getElementById('poTotal').innerHTML = `<div class="grand"><span>Total commandé</span><span>${fmtFCFA(total())}</span></div>`; };
+  function renderLines() {
+    const host = document.getElementById('poLines');
+    host.innerHTML = lines.map((l, i) => `
+      <div class="doc-line" data-idx="${i}">
+        <label class="full">Article<select data-f="article_id"><option value="">— Ligne libre (hors stock) —</option>${articleOptions}</select></label>
+        <label class="full">Désignation<input data-f="description" value="${escapeHtml(l.description)}"></label>
+        <label>Quantité<input data-f="qty" type="number" min="1" step="1" inputmode="numeric" value="${l.qty}"></label>
+        <label>Coût unitaire<input data-f="unit_cost" type="number" min="0" step="1" inputmode="numeric" value="${l.unit_cost}"></label>
+        <div class="line-foot">
+          <button type="button" class="remove-line" ${lines.length === 1 ? 'hidden' : ''}>Retirer la ligne</button>
+          <strong data-total>${fmtFCFA(Math.round((Number(l.qty) || 0) * (Number(l.unit_cost) || 0)))}</strong>
+        </div>
+      </div>`).join('');
+    host.querySelectorAll('.doc-line').forEach(row => {
+      const i = Number(row.dataset.idx);
+      const refresh = () => { row.querySelector('[data-total]').textContent = fmtFCFA(Math.round((Number(lines[i].qty) || 0) * (Number(lines[i].unit_cost) || 0))); renderTotal(); };
+      const sel = row.querySelector('[data-f="article_id"]');
+      sel.value = lines[i].article_id || '';
+      sel.addEventListener('change', () => {
+        lines[i].article_id = sel.value;
+        const a = articles[sel.value];
+        if (a) {
+          lines[i].description = a.name; lines[i].unit_cost = Number(a.buy_price) || 0;
+          row.querySelector('[data-f="description"]').value = a.name;
+          row.querySelector('[data-f="unit_cost"]').value = lines[i].unit_cost;
+        }
+        refresh();
+      });
+      row.querySelector('[data-f="description"]').addEventListener('input', (e) => { lines[i].description = e.target.value; });
+      row.querySelector('[data-f="qty"]').addEventListener('input', (e) => { lines[i].qty = e.target.value; refresh(); });
+      row.querySelector('[data-f="unit_cost"]').addEventListener('input', (e) => { lines[i].unit_cost = e.target.value; refresh(); });
+      row.querySelector('.remove-line').addEventListener('click', () => { lines.splice(i, 1); renderLines(); });
+    });
+    renderTotal();
+  }
+  renderLines();
+  document.getElementById('addPoLineBtn').addEventListener('click', () => {
+    lines.push({ article_id: '', description: '', qty: 1, unit_cost: '' });
+    renderLines();
+  });
+
+  async function save(andPlace) {
+    const errEl = document.getElementById('poError');
+    errEl.textContent = '';
+    const cleaned = lines.filter(l => l.article_id || String(l.description).trim()).map(l => ({
+      article_id: l.article_id || null, description: String(l.description || '').trim(),
+      qty: parseInt(l.qty, 10), unit_cost: Number(l.unit_cost),
+    }));
+    if (cleaned.length === 0) { errEl.textContent = 'Ajoutez au moins une ligne.'; return; }
+    if (cleaned.some(l => !(l.qty > 0))) { errEl.textContent = 'Chaque ligne doit avoir une quantité d\'au moins 1.'; return; }
+    if (cleaned.some(l => !(l.unit_cost >= 0))) { errEl.textContent = 'Chaque ligne doit avoir un coût.'; return; }
+    if (!navigator.onLine) { errEl.textContent = 'Connexion internet nécessaire.'; return; }
+    const buttons = backdrop.querySelectorAll('button'); buttons.forEach(b => b.disabled = true);
+    try {
+      const { data: poId, error } = await supa.rpc('save_purchase_order', {
+        p_id: po ? id : null, p_supplier_id: supSel.value, p_lines: cleaned,
+        p_expected_date: document.getElementById('poExpected').value || null,
+        p_due_date: document.getElementById('poDue').value || null,
+        p_supplier_ref: document.getElementById('poRef').value, p_notes: document.getElementById('poNotes').value,
+      });
+      if (error) throw error;
+      let number = null;
+      if (andPlace) {
+        const r = await supa.rpc('place_purchase_order', { p_id: poId });
+        if (r.error) { await loadPurchasing(); throw new Error(`Brouillon enregistré, mais commande impossible : ${r.error.message}`); }
+        number = r.data;
+      }
+      markActivity();
+      await loadPurchasing();
+      close();
+      toast(number ? `Commande ${number} passée.` : 'Brouillon enregistré.');
+      openPurchaseOrderView(poId);
+    } catch (err) {
+      console.error(err);
+      errEl.textContent = err.message || "Erreur lors de l'enregistrement.";
+      buttons.forEach(b => b.disabled = false);
+    }
+  }
+  document.getElementById('poForm').addEventListener('submit', (e) => { e.preventDefault(); save(false); });
+  document.getElementById('poSavePlaceBtn').addEventListener('click', () => save(true));
+}
+
+// ---- Fiche d'un bon de commande
+function openPurchaseOrderView(id) {
+  const po = purchaseOrders[id];
+  if (!po) return;
+  const st = PO_STATUS[po.status] || { label: po.status, cls: '' };
+  const debt = poDebt(po), toPay = poToPay(po);
+  const actions = [];
+  if (po.status === 'brouillon') actions.push(['place', 'Passer la commande', 'primary'], ['edit', 'Modifier', 'ghost']);
+  if ((po.status === 'commande' || po.status === 'partiel') && canReceive()) actions.push(['receive', 'Réceptionner la marchandise', 'primary']);
+  if (toPay > 0) actions.push(['pay', debt > 0 ? 'Payer le fournisseur' : 'Verser un acompte', debt > 0 ? 'primary' : 'ghost']);
+  actions.push(['print', 'Imprimer / PDF', 'ghost']);
+  if (po.supplier_id && suppliersMap[po.supplier_id]) actions.push(['supplier', 'Voir le fournisseur', 'ghost']);
+  if (po.status === 'commande' && canReceive() && (Number(po.amount_paid) || 0) === 0) actions.push(['cancel', 'Annuler la commande', 'ghost']);
+  if (po.status === 'brouillon') actions.push(['delete', 'Supprimer le brouillon', 'ghost']);
+
+  const backdrop = document.createElement('div');
+  backdrop.className = 'sheet-backdrop';
+  backdrop.innerHTML = `
+    <div class="sheet">
+      <div class="sheet-head"><h2>${escapeHtml(po.number || 'Bon de commande (brouillon)')}</h2><button class="sheet-close" type="button">✕</button></div>
+      <div><span class="doc-badge ${st.cls}">${st.label}</span>${poOverdue(po) ? ' <span class="doc-badge bad">Paiement en retard</span>' : ''}</div>
+      <div class="doc-meta">
+        <div>Fournisseur : <strong>${escapeHtml(po.supplier_name || '—')}</strong>${po.supplier_ref ? ` · Réf. ${escapeHtml(po.supplier_ref)}` : ''}</div>
+        <div>${po.order_date ? `Commandé le <strong>${fmtDate(po.order_date)}</strong>` : 'Pas encore commandé'}${po.expected_date ? ` · Livraison prévue <strong>${fmtDate(po.expected_date)}</strong>` : ''}</div>
+        ${po.due_date ? `<div>Échéance de paiement : <strong>${fmtDate(po.due_date)}</strong></div>` : ''}
+        ${po.status === 'annule' ? `<div>Motif d'annulation : <strong>${escapeHtml(po.cancel_reason || '')}</strong></div>` : ''}
+      </div>
+      <div class="doc-view-lines">${po.purchase_order_lines.map(l => `
+        <div class="doc-view-line"><div class="d">${escapeHtml(l.description)}<small>${l.qty_ordered} × ${fmtFCFA(l.unit_cost)}${po.status !== 'brouillon' ? ` · reçu ${l.qty_received}/${l.qty_ordered}` : ''}${l.article_id ? '' : ' · hors stock'}</small></div>
+        <div class="t">${fmtFCFA(l.line_total)}</div></div>`).join('')}</div>
+      <div class="doc-totals">
+        <div class="grand"><span>Total commandé</span><span>${fmtFCFA(po.total)}</span></div>
+        ${po.status !== 'brouillon' ? `
+          <div><span>Valeur reçue</span><span>${fmtFCFA(po.received_value)}</span></div>
+          <div><span>Déjà payé</span><span>${fmtFCFA(po.amount_paid)}</span></div>
+          <div class="${debt > 0 ? 'due' : ''}"><span>Dette actuelle</span><span>${fmtFCFA(debt)}</span></div>
+          ${toPay > debt ? `<div><span>Reste à payer sur la commande</span><span>${fmtFCFA(toPay)}</span></div>` : ''}` : ''}
+      </div>
+      ${po.supplier_payments.length ? `<h3>Paiements</h3><div class="doc-view-lines">${po.supplier_payments.map(p => `
+        <div class="doc-view-line"><div class="d">${PAY_METHODS[p.method] || p.method}<small>${fmtDate(p.paid_at)}${p.reference ? ' · Réf. ' + escapeHtml(p.reference) : ''}</small></div>
+        <div class="t">${fmtFCFA(p.amount)}</div></div>`).join('')}</div>` : ''}
+      ${po.notes ? `<div class="current-stock-hint">Notes : ${escapeHtml(po.notes)}</div>` : ''}
+      ${(po.status === 'commande' || po.status === 'partiel') && !canReceive() ? '<div class="current-stock-hint">La réception de la marchandise est faite par le propriétaire ou le gérant.</div>' : ''}
+      <div style="display:flex; flex-direction:column; gap:8px">
+        ${actions.map(([k, l, kind]) => `<button type="button" class="btn btn-${kind} btn-block" data-action="${k}">${l}</button>`).join('')}
+      </div>
+    </div>`;
+  document.body.appendChild(backdrop);
+  const close = () => backdrop.remove();
+  backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(); });
+  backdrop.querySelector('.sheet-close').addEventListener('click', close);
+  const reopen = () => setTimeout(() => openPurchaseOrderView(id), 0);
+
+  backdrop.querySelectorAll('[data-action]').forEach(btn => btn.addEventListener('click', async () => {
+    const a = btn.dataset.action;
+    if (a === 'edit') { close(); openPurchaseOrderEditor(id); return; }
+    if (a === 'print') { printPurchaseOrder(id); return; }
+    if (a === 'supplier') { close(); openSupplierSheet(po.supplier_id); return; }
+    if (a === 'place') {
+      const { data, error } = await supa.rpc('place_purchase_order', { p_id: id });
+      if (error) { toast(error.message); return; }
+      markActivity(); await loadPurchasing(); close(); toast(`Commande ${data} passée.`); reopen(); return;
+    }
+    if (a === 'receive') { close(); openReceiveSheet(id); return; }
+    if (a === 'pay') {
+      close();
+      openFormSheet({
+        title: debt > 0 ? 'Payer le fournisseur' : 'Verser un acompte',
+        intro: `${escapeHtml(po.number)} · ${escapeHtml(po.supplier_name || '')}<br>Dette actuelle : <strong>${fmtFCFA(debt)}</strong> · reste à payer sur la commande : <strong>${fmtFCFA(toPay)}</strong>`,
+        fields: [
+          { id: 'amount', type: 'number', label: 'Montant (FCFA)', value: debt > 0 ? debt : toPay, min: 1, step: 1, required: true },
+          { id: 'method', type: 'select', label: 'Moyen de paiement', value: 'especes', options: Object.entries(PAY_METHODS).map(([value, label]) => ({ value, label })) },
+          { id: 'reference', label: 'Référence', placeholder: 'N° de transaction, chèque…' },
+        ],
+        submitLabel: 'Enregistrer le paiement',
+        onSubmit: async (v) => {
+          const amount = Number(v.amount);
+          if (!(amount > 0)) throw new Error('Montant invalide.');
+          if (amount > toPay) throw new Error(`Le montant dépasse le reste à payer sur la commande (${fmtFCFA(toPay)}).`);
+          const { error } = await supa.rpc('record_supplier_payment', { p_id: id, p_amount: amount, p_method: v.method, p_reference: v.reference || null });
+          if (error) throw error;
+          markActivity(); await loadPurchasing(); toast('Paiement enregistré.'); reopen();
+        },
+      });
+      return;
+    }
+    if (a === 'cancel') {
+      close();
+      openFormSheet({
+        title: 'Annuler la commande',
+        intro: `${escapeHtml(po.number)} restera visible avec le statut « Annulé ».`,
+        fields: [{ id: 'reason', label: "Motif d'annulation", required: true, placeholder: 'Ex : fournisseur en rupture' }],
+        submitLabel: "Confirmer l'annulation",
+        onSubmit: async (v) => {
+          if (!v.reason.trim()) throw new Error('Le motif est obligatoire.');
+          const { error } = await supa.rpc('cancel_purchase_order', { p_id: id, p_reason: v.reason });
+          if (error) throw error;
+          await loadPurchasing(); toast('Commande annulée.'); reopen();
+        },
+      });
+      return;
+    }
+    if (a === 'delete') {
+      close();
+      openFormSheet({
+        title: 'Supprimer le brouillon', intro: 'Ce bon de commande en brouillon sera définitivement supprimé.', fields: [],
+        submitLabel: 'Supprimer',
+        onSubmit: async () => {
+          const { error } = await supa.rpc('delete_purchase_order', { p_id: id });
+          if (error) throw error;
+          await loadPurchasing(); toast('Brouillon supprimé.');
+        },
+      });
+    }
+  }));
+}
+
+// ---- Réception
+function openReceiveSheet(id) {
+  const po = purchaseOrders[id];
+  const lines = po.purchase_order_lines.map(l => ({ id: l.id, description: l.description, article_id: l.article_id, remaining: l.qty_ordered - l.qty_received, qty: l.qty_ordered - l.qty_received, unit_cost: Number(l.unit_cost) }));
+  const backdrop = document.createElement('div');
+  backdrop.className = 'sheet-backdrop';
+  backdrop.innerHTML = `
+    <div class="sheet">
+      <div class="sheet-head"><h2>Réception ${escapeHtml(po.number)}</h2><button class="sheet-close" type="button">✕</button></div>
+      <div class="current-stock-hint">Indiquez ce qui est effectivement arrivé (0 si une ligne n'est pas encore livrée). Les articles reçus entrent en stock immédiatement.</div>
+      <form id="receiveForm">
+        <div class="doc-lines">${lines.map((l, i) => `
+          <div class="doc-line" data-idx="${i}">
+            <div class="full"><strong>${escapeHtml(l.description)}</strong>
+              <div class="current-stock-hint">Reste à recevoir : ${l.remaining}${l.article_id ? ` · en stock actuellement : ${articles[l.article_id]?.qty ?? '—'}` : ' · ligne hors stock'}</div></div>
+            <label class="full">Quantité reçue<input data-f="qty" type="number" min="0" max="${l.remaining}" step="1" inputmode="numeric" value="${l.qty}" ${l.remaining === 0 ? 'disabled' : ''}></label>
+          </div>`).join('')}</div>
+        <label class="check-line"><input type="checkbox" id="rcvUpdatePrice" checked> Mettre à jour le prix d'achat des articles avec le coût de cette commande</label>
+        <p class="sheet-error" id="rcvError"></p>
+        <button type="submit" class="btn btn-primary btn-block">Valider la réception</button>
+      </form>
+    </div>`;
+  document.body.appendChild(backdrop);
+  const close = () => backdrop.remove();
+  backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(); });
+  backdrop.querySelector('.sheet-close').addEventListener('click', close);
+  backdrop.querySelectorAll('.doc-line').forEach(row => {
+    const i = Number(row.dataset.idx);
+    const inp = row.querySelector('[data-f="qty"]');
+    inp.addEventListener('input', () => {
+      let v = parseInt(inp.value, 10) || 0;
+      if (v > lines[i].remaining) { v = lines[i].remaining; inp.value = v; }
+      if (v < 0) { v = 0; inp.value = 0; }
+      lines[i].qty = v;
+    });
+  });
+  document.getElementById('receiveForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errEl = document.getElementById('rcvError');
+    const payload = lines.filter(l => l.qty > 0).map(l => ({ line_id: l.id, qty: l.qty }));
+    if (payload.length === 0) { errEl.textContent = 'Indiquez au moins une quantité reçue.'; return; }
+    if (!navigator.onLine) { errEl.textContent = 'Connexion internet nécessaire.'; return; }
+    const btn = e.target.querySelector('button[type="submit"]'); btn.disabled = true;
+    const { error } = await supa.rpc('receive_purchase_order', { p_id: id, p_lines: payload, p_update_buy_price: document.getElementById('rcvUpdatePrice').checked });
+    if (error) { errEl.textContent = error.message; btn.disabled = false; return; }
+    markActivity();
+    await loadPurchasing();
+    loadArticles(); loadMovements();
+    close();
+    toast('Réception enregistrée, stock mis à jour.');
+    openPurchaseOrderView(id);
+  });
+}
+
+// ---- Impression du bon de commande
+function printPurchaseOrder(id) {
+  const po = purchaseOrders[id];
+  if (!po) return;
+  const s = shopInfo || {};
+  const sup = suppliersMap[po.supplier_id] || {};
+  const shopName = s.legal_name || s.name || 'Boutique';
+  const idLines = [
+    s.address ? escapeHtml(s.address) : '',
+    [s.phone, s.email].filter(Boolean).map(escapeHtml).join(' · '),
+    [s.ncc ? `NCC : ${escapeHtml(s.ncc)}` : '', s.rccm ? `RCCM : ${escapeHtml(s.rccm)}` : ''].filter(Boolean).join(' · '),
+  ].filter(Boolean).map(x => `<div>${x}</div>`).join('');
+  document.getElementById('printArea').innerHTML = `
+    <div class="pdoc">
+      <div class="phead">
+        <div class="pshop"><h1>${escapeHtml(shopName)}</h1>${idLines}</div>
+        <div class="pinfo">
+          <div class="ptitle">BON DE COMMANDE</div>
+          <div><strong>N° ${escapeHtml(po.number || '—')}</strong></div>
+          <div>Date : ${fmtDate(po.order_date || po.created_at)}</div>
+          ${po.expected_date ? `<div>Livraison souhaitée : ${fmtDate(po.expected_date)}</div>` : ''}
+          ${po.status === 'brouillon' ? '<div class="pstamp">BROUILLON</div>' : ''}
+          ${po.status === 'annule' ? '<div class="pstamp">ANNULÉ</div>' : ''}
+        </div>
+      </div>
+      <div class="pclient">
+        <div class="lbl">Fournisseur</div>
+        <div><strong>${escapeHtml(po.supplier_name || '')}</strong></div>
+        ${sup.contact_name ? `<div>À l'attention de ${escapeHtml(sup.contact_name)}</div>` : ''}
+        ${[sup.phone, sup.email].filter(Boolean).length ? `<div>${[sup.phone, sup.email].filter(Boolean).map(escapeHtml).join(' · ')}</div>` : ''}
+        ${sup.address ? `<div>${escapeHtml(sup.address)}</div>` : ''}
+      </div>
+      <table>
+        <thead><tr><th>Désignation</th><th class="n">Qté</th><th class="n">Prix unitaire</th><th class="n">Total</th></tr></thead>
+        <tbody>${po.purchase_order_lines.map(l => `<tr><td>${escapeHtml(l.description)}</td><td class="n">${l.qty_ordered}</td><td class="n">${fmtFCFA(l.unit_cost)}</td><td class="n">${fmtFCFA(l.line_total)}</td></tr>`).join('')}</tbody>
+      </table>
+      <div class="ptotals"><div class="grand"><span>Total</span><span>${fmtFCFA(po.total)}</span></div></div>
+      ${po.due_date ? `<div class="pnotes"><strong>Échéance de paiement :</strong> ${fmtDate(po.due_date)}</div>` : ''}
+      ${po.notes ? `<div class="pnotes"><strong>Notes :</strong> ${escapeHtml(po.notes)}</div>` : ''}
+      <div class="plegal">Bon de commande émis par ${escapeHtml(shopName)}.${s.invoice_footer ? `<div style="margin-top:4px">${escapeHtml(s.invoice_footer)}</div>` : ''}</div>
+    </div>`;
+  setTimeout(() => window.print(), 50);
+}
+
+document.getElementById('newPoBtn')?.addEventListener('click', () => openPurchaseOrderEditor(null));
+document.getElementById('newSupplierBtn')?.addEventListener('click', () => openSupplierSheet(null));
+
+// ---------------------------------------------------------------------------
 // Retours & remboursements (module 5)
 // ---------------------------------------------------------------------------
 const RETURN_REASONS = {
@@ -2037,12 +2584,14 @@ function renderDashboard() {
     if (r > 0) { acc.count += 1; acc.total += r; }
     return acc;
   }, { count: 0, total: 0 });
+  const supplierDebt = Object.values(purchaseOrders).reduce((s, po) => s + poDebt(po), 0);
 
   document.getElementById('dashboardTiles').innerHTML = `
     <div class="tile"><div class="label">Ventes aujourd'hui</div><div class="value">${unitsSoldToday}</div></div>
     ${gerant ? `<div class="tile"><div class="label">CA aujourd'hui</div><div class="value small">${fmtFCFA(revenueToday)}</div></div>` : ''}
     ${gerant ? `<div class="tile"><div class="label">Marge 7 jours</div><div class="value small">${fmtFCFA(margin7d)}</div></div>` : ''}
     ${gerant && unpaidInvoices.count > 0 ? `<div class="tile"><div class="label">Factures impayées (${unpaidInvoices.count})</div><div class="value small">${fmtFCFA(unpaidInvoices.total)}</div></div>` : ''}
+    ${gerant && supplierDebt > 0 ? `<div class="tile"><div class="label">Dettes fournisseurs</div><div class="value small">${fmtFCFA(supplierDebt)}</div></div>` : ''}
   `;
 
   document.getElementById('dashboardAlert').innerHTML = alertCount > 0
@@ -2081,6 +2630,7 @@ function applyRoleToUI() {
   document.getElementById('articlesTabBtn').hidden = !gerant;
   document.getElementById('ventesTabBtn').hidden = currentProfile.role === 'livreur';
   document.getElementById('shopSettingsBtn').hidden = !gerant;
+  document.getElementById('achatsTabBtn').hidden = !canManageInvoices();
   // Si le vendeur était sur l'onglet Articles au moment où le rôle se charge, on le ramène sur Stock
   if (!gerant && currentTab === 'articles') {
     currentTab = 'stock';
@@ -2800,6 +3350,7 @@ function showLogin() {
   document.getElementById('fixedPanel-historique').hidden = true;
   document.getElementById('fixedPanel-clients').hidden = true;
   document.getElementById('fixedPanel-ventes').hidden = true;
+  document.getElementById('fixedPanel-achats').hidden = true;
   document.getElementById('fixedPanel-articles').hidden = true;
   document.getElementById('offlineStatus').hidden = true;
   document.getElementById('pendingBadge').hidden = true;
@@ -2820,6 +3371,7 @@ function showSignup() {
   document.getElementById('fixedPanel-historique').hidden = true;
   document.getElementById('fixedPanel-clients').hidden = true;
   document.getElementById('fixedPanel-ventes').hidden = true;
+  document.getElementById('fixedPanel-achats').hidden = true;
   document.getElementById('fixedPanel-articles').hidden = true;
   document.getElementById('offlineStatus').hidden = true;
   document.getElementById('pendingBadge').hidden = true;
@@ -2876,7 +3428,7 @@ function showApp() {
   document.getElementById('logoutBtn').hidden = false;
   document.getElementById('changePasswordBtn').hidden = false;
   document.querySelector('.app-fixed-top nav.tabs').hidden = false;
-  ['dashboard', 'stock', 'historique', 'clients', 'ventes', 'articles'].forEach(t => {
+  ['dashboard', 'stock', 'historique', 'clients', 'ventes', 'achats', 'articles'].forEach(t => {
     document.getElementById('fixedPanel-' + t).hidden = (t !== currentTab);
   });
   document.getElementById('fixedTop').hidden = false;
@@ -2987,6 +3539,7 @@ function enterAppWithProfile() {
   loadShopInfo();
   loadSalesDocuments();
   loadReturns();
+  loadPurchasing();
   updateOnlineStatus();
   updatePendingBadge();
   syncPendingMovements();
@@ -3032,6 +3585,11 @@ function subscribeRealtime() {
   customersChannel = supa.channel('public:customers')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, loadCustomers)
     .subscribe();
+  purchasingChannel = supa.channel('public:purchasing')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'suppliers' }, loadPurchasing)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'purchase_orders' }, loadPurchasing)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'supplier_payments' }, loadPurchasing)
+    .subscribe();
   salesDocsChannel = supa.channel('public:sales_documents')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'sales_documents' }, loadSalesDocuments)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'invoice_payments' }, loadSalesDocuments)
@@ -3044,6 +3602,7 @@ function unsubscribeRealtime() {
   if (movementsChannel) { supa.removeChannel(movementsChannel); movementsChannel = null; }
   if (customersChannel) { supa.removeChannel(customersChannel); customersChannel = null; }
   if (salesDocsChannel) { supa.removeChannel(salesDocsChannel); salesDocsChannel = null; }
+  if (purchasingChannel) { supa.removeChannel(purchasingChannel); purchasingChannel = null; }
 }
 
 async function start() {
