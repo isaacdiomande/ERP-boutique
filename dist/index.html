@@ -254,6 +254,69 @@ form { display: flex; flex-direction: column; gap: 14px; }
 .login-card .subtitle { text-align: center; color: var(--ink-dim); font-size: 0.85rem; margin-top: -8px; }
 .login-error { color: var(--bad); font-size: 0.82rem; min-height: 1.2em; text-align: center; }
 .logout-link { background: none; border: none; color: var(--ink-dim); font-size: 0.78rem; cursor: pointer; padding: 4px; text-decoration: underline; }
+
+/* --- Devis & factures --------------------------------------------------- */
+.history-row .kind.retour { background: color-mix(in srgb, var(--accent) 15%, var(--surface)); color: var(--accent); }
+.doc-badge { display: inline-block; font-size: 0.66rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; padding: 2px 7px; border-radius: 999px; background: var(--surface-sunken); color: var(--ink-dim); }
+.doc-badge.ok { background: var(--good-bg); color: var(--good); }
+.doc-badge.warn { background: var(--warn-bg); color: var(--warn); }
+.doc-badge.bad { background: var(--bad-bg); color: var(--bad); }
+.doc-badge.accent { background: color-mix(in srgb, var(--accent) 15%, var(--surface)); color: var(--accent); }
+.article-row .meta .doc-badge { margin-left: 4px; vertical-align: 1px; }
+.btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.field textarea { border: 1px solid var(--border); background: var(--surface); color: var(--ink); border-radius: 10px; padding: 10px 12px; font-size: 0.92rem; width: 100%; font-family: inherit; resize: vertical; min-height: 60px; }
+.check-line { display: flex; align-items: center; gap: 8px; font-size: 0.86rem; cursor: pointer; }
+.check-line input { width: auto; }
+.doc-lines { display: flex; flex-direction: column; gap: 10px; }
+.doc-line { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.doc-line .full { grid-column: 1 / -1; }
+.doc-line select, .doc-line input { border: 1px solid var(--border); background: var(--bg); color: var(--ink); border-radius: 8px; padding: 8px 10px; font-size: 0.88rem; width: 100%; }
+.doc-line label { font-size: 0.7rem; font-weight: 600; color: var(--ink-dim); display: flex; flex-direction: column; gap: 3px; }
+.doc-line .line-foot { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem; }
+.doc-line .line-foot strong { font-family: var(--font-mono); }
+.doc-line .remove-line { background: none; border: none; color: var(--bad); font-size: 0.8rem; font-weight: 600; cursor: pointer; padding: 2px 4px; }
+.doc-totals { background: var(--surface-sunken); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 4px; font-size: 0.86rem; }
+.doc-totals div { display: flex; justify-content: space-between; }
+.doc-totals span:last-child { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.doc-totals .grand { font-weight: 700; font-size: 1rem; border-top: 1px solid var(--border); padding-top: 6px; margin-top: 2px; }
+.doc-totals .due { color: var(--bad); font-weight: 700; }
+.doc-meta { display: flex; flex-direction: column; gap: 3px; font-size: 0.84rem; color: var(--ink-dim); }
+.doc-meta strong { color: var(--ink); }
+.doc-view-lines { display: flex; flex-direction: column; gap: 6px; }
+.doc-view-line { display: flex; justify-content: space-between; gap: 10px; font-size: 0.86rem; padding: 8px 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+.doc-view-line .d { min-width: 0; }
+.doc-view-line .d small { display: block; color: var(--ink-dim); font-size: 0.74rem; }
+.doc-view-line .t { font-family: var(--font-mono); font-weight: 700; flex: none; }
+.fne-note { font-size: 0.76rem; color: var(--ink-dim); background: var(--surface-sunken); border-radius: 10px; padding: 9px 11px; line-height: 1.4; }
+.sheet-error { color: var(--bad); font-size: 0.82rem; min-height: 1.1em; }
+
+/* Zone d'impression : invisible à l'écran, seule visible à l'impression */
+#printArea { display: none; }
+@media print {
+  @page { size: A4; margin: 14mm; }
+  body > *:not(#printArea) { display: none !important; }
+  body { background: #fff !important; padding: 0 !important; }
+  #printArea { display: block !important; }
+}
+.pdoc { color: #111; background: #fff; font-family: var(--font-body); font-size: 10.5pt; line-height: 1.4; }
+.pdoc .phead { display: flex; justify-content: space-between; gap: 24px; border-bottom: 2px solid #3c7a52; padding-bottom: 10px; margin-bottom: 14px; }
+.pdoc .pshop h1 { font-size: 15pt; margin: 0 0 3px; color: #3c7a52; }
+.pdoc .pshop div, .pdoc .pinfo div { font-size: 9pt; color: #333; }
+.pdoc .pinfo { text-align: right; }
+.pdoc .pinfo .ptitle { font-size: 18pt; font-weight: 700; letter-spacing: 0.04em; color: #111; }
+.pdoc .pclient { border: 1px solid #ccc; border-radius: 6px; padding: 8px 10px; margin-bottom: 14px; max-width: 60%; }
+.pdoc .pclient .lbl { font-size: 8pt; text-transform: uppercase; color: #666; }
+.pdoc table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+.pdoc th { background: #eef4f0; text-align: left; font-size: 8.5pt; text-transform: uppercase; padding: 6px 8px; border-bottom: 1px solid #bbb; }
+.pdoc td { padding: 6px 8px; border-bottom: 1px solid #e3e3e3; vertical-align: top; }
+.pdoc td.n, .pdoc th.n { text-align: right; font-family: var(--font-mono); white-space: nowrap; }
+.pdoc .ptotals { margin-left: auto; width: 46%; }
+.pdoc .ptotals div { display: flex; justify-content: space-between; padding: 3px 0; }
+.pdoc .ptotals .grand { font-weight: 700; font-size: 12pt; border-top: 2px solid #111; margin-top: 4px; padding-top: 6px; }
+.pdoc .pnotes { margin-top: 14px; font-size: 9pt; }
+.pdoc .plegal { margin-top: 18px; font-size: 8pt; color: #555; border-top: 1px solid #ddd; padding-top: 8px; }
+.pdoc .pstamp { display: inline-block; border: 2px solid #b23b3b; color: #b23b3b; font-weight: 700; padding: 2px 10px; border-radius: 4px; font-size: 11pt; margin-top: 6px; }
 </style>
 </head>
 <body>
@@ -280,6 +343,7 @@ form { display: flex; flex-direction: column; gap: 14px; }
     <button class="tab-btn" data-tab="stock">Stock</button>
     <button class="tab-btn" data-tab="historique">Historique</button>
     <button class="tab-btn" data-tab="clients" id="clientsTabBtn">Clients</button>
+    <button class="tab-btn" data-tab="ventes" id="ventesTabBtn">Devis &amp; Factures</button>
     <button class="tab-btn" data-tab="articles" id="articlesTabBtn">Articles</button>
   </nav>
 
@@ -301,6 +365,7 @@ form { display: flex; flex-direction: column; gap: 14px; }
         <option value="vente">Ventes</option>
         <option value="reassort">Réassorts</option>
         <option value="perte">Casse / Perte</option>
+        <option value="retour">Retours</option>
       </select>
     </div>
   </div>
@@ -310,6 +375,24 @@ form { display: flex; flex-direction: column; gap: 14px; }
     <div class="searchbar">
       <input type="search" id="customerSearchInput" placeholder="Rechercher un client…">
     </div>
+  </div>
+
+  <div class="fixed-tab-panel" id="fixedPanel-ventes" hidden>
+    <div class="btn-row">
+      <button class="btn btn-ghost" id="newQuoteBtn">+ Nouveau devis</button>
+      <button class="btn btn-ghost" id="newInvoiceBtn">+ Nouvelle facture</button>
+    </div>
+    <div class="searchbar">
+      <input type="search" id="docSearchInput" placeholder="N°, client…">
+      <select id="docFilter">
+        <option value="">Tous</option>
+        <option value="devis">Devis</option>
+        <option value="facture">Factures</option>
+        <option value="impayees">Impayées</option>
+        <option value="brouillons">Brouillons</option>
+      </select>
+    </div>
+    <button class="btn btn-ghost btn-block" id="shopSettingsBtn" hidden>⚙ Infos boutique (en-tête des documents)</button>
   </div>
 
   <div class="fixed-tab-panel" id="fixedPanel-articles" hidden>
@@ -370,6 +453,10 @@ form { display: flex; flex-direction: column; gap: 14px; }
     <div class="article-list" id="customerList"></div>
   </section>
 
+  <section id="tab-ventes" hidden>
+    <div class="article-list" id="docList"></div>
+  </section>
+
   <section id="tab-articles" hidden>
     <div class="article-list" id="articlesManageList"></div>
   </section>
@@ -377,6 +464,7 @@ form { display: flex; flex-direction: column; gap: 14px; }
 
 <button class="fab" id="fabMove" title="Enregistrer un mouvement" hidden>+</button>
 <div id="toastHost"></div>
+<div id="printArea"></div>
 
 <!-- Config locale (vos clés Supabase) -->
 <script src="config.js"></script>
@@ -465,6 +553,9 @@ function timeAgo(ts) {
 let articles = {};   // id -> {name, category, qty, buy_price, sell_price, threshold}
 let movements = [];  // [{id, article_id, type, qty, by_name, at}]
 let customers = {};  // id -> {name, phone, email, address, segment, credit_limit, credit_balance, notes}
+let salesDocs = {};  // id -> document (devis/facture) avec .sales_document_lines et .invoice_payments
+let shopInfo = null; // ligne `shops` de la boutique courante (en-tête, TVA)
+let salesDocsChannel = null;
 let currentTab = 'dashboard';
 let currentProfile = null; // {role, display_name, email}
 let articlesChannel = null;
@@ -512,7 +603,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     currentTab = btn.dataset.tab;
-    ['dashboard', 'stock', 'historique', 'clients', 'articles'].forEach(t => {
+    ['dashboard', 'stock', 'historique', 'clients', 'ventes', 'articles'].forEach(t => {
       document.getElementById('tab-' + t).hidden = (t !== currentTab);
       document.getElementById('fixedPanel-' + t).hidden = (t !== currentTab);
     });
@@ -588,13 +679,13 @@ function renderHistory() {
     host.innerHTML = `<div class="empty-state">Aucun mouvement enregistré.</div>`;
     return;
   }
-  const kindLabel = { vente: 'V', reassort: 'R', perte: 'P' };
-  const kindWord = { vente: 'Vente', reassort: 'Réassort', perte: 'Casse/Perte' };
+  const kindLabel = { vente: 'V', reassort: 'R', perte: 'P', retour: 'T' };
+  const kindWord = { vente: 'Vente', reassort: 'Réassort', perte: 'Casse/Perte', retour: 'Retour' };
   host.innerHTML = list.map(m => {
     const art = articles[m.article_id];
     const name = art ? art.name : '(article supprimé)';
-    const sign = m.type === 'reassort' ? '+' : '−';
-    const cls = m.type === 'reassort' ? 'pos' : 'neg';
+    const sign = (m.type === 'reassort' || m.type === 'retour') ? '+' : '−';
+    const cls = (m.type === 'reassort' || m.type === 'retour') ? 'pos' : 'neg';
     const when = m.at ? timeAgo(new Date(m.at).getTime()) : '';
     return `
       <div class="history-row ${m.pending ? 'pending' : ''}">
@@ -640,6 +731,7 @@ function renderAll() {
   renderHistory();
   renderArticlesManage();
   renderCustomers();
+  renderSalesDocs();
   renderDashboard();
 }
 
@@ -662,7 +754,7 @@ function renderCustomers() {
     return;
   }
   host.innerHTML = list.map(([id, c]) => {
-    const due = c.credit_balance || 0;
+    const due = (Number(c.credit_balance) || 0) + customerInvoiceDue(id);
     const dueClass = due > 0 ? 'bad' : 'good';
     return `
     <div class="article-row" data-id="${id}">
@@ -692,7 +784,7 @@ function openCustomerSheet(id) {
   const backdrop = document.createElement('div');
   backdrop.className = 'sheet-backdrop';
   const history = existing ? customerHistory(id) : [];
-  const typeWord = { vente: 'Vente', reassort: 'Réassort', perte: 'Casse/Perte' };
+  const typeWord = { vente: 'Vente', reassort: 'Réassort', perte: 'Casse/Perte', retour: 'Retour' };
   backdrop.innerHTML = `
     <div class="sheet">
       <div class="sheet-head"><h2>${existing ? 'Modifier le client' : 'Nouveau client'}</h2><button class="sheet-close" id="closeCustSheet">✕</button></div>
@@ -704,7 +796,7 @@ function openCustomerSheet(id) {
         <div class="field"><label for="custSegment">Segment</label><input id="custSegment" value="${existing ? escapeHtml(existing.segment || '') : ''}" placeholder="Ex : Fidèle, Grossiste"></div>
         <div class="field"><label for="custCreditLimit">Plafond de crédit autorisé (FCFA)</label><input id="custCreditLimit" type="number" min="0" inputmode="numeric" value="${existing ? (existing.credit_limit ?? 0) : 0}"></div>
         <div class="field"><label for="custNotes">Notes</label><input id="custNotes" value="${existing ? escapeHtml(existing.notes || '') : ''}"></div>
-        ${existing ? `<div class="current-stock-hint">Solde dû actuel : <strong>${fmtFCFA(existing.credit_balance || 0)}</strong></div>` : ''}
+        ${existing ? `<div class="current-stock-hint">Crédit comptoir dû : <strong>${fmtFCFA(existing.credit_balance || 0)}</strong>${customerInvoiceDue(id) > 0 ? ` · Factures impayées : <strong>${fmtFCFA(customerInvoiceDue(id))}</strong> (à régler depuis l'onglet Devis &amp; Factures)` : ''}</div>` : ''}
         <button type="submit" class="btn btn-primary btn-block">${existing ? 'Enregistrer' : 'Ajouter le client'}</button>
         ${existing && (existing.credit_balance || 0) > 0 ? '<button type="button" class="btn btn-ghost btn-block" id="recordPaymentBtn">Enregistrer un paiement</button>' : ''}
         ${existing && isGerant() ? '<button type="button" class="btn btn-ghost btn-block" id="deleteCustBtn">Supprimer le client</button>' : ''}
@@ -765,21 +857,23 @@ function openCustomerSheet(id) {
   });
 
   if (existing) {
-    document.getElementById('recordPaymentBtn')?.addEventListener('click', async () => {
-      const raw = prompt(`Montant payé par ${existing.name} (solde dû : ${fmtFCFA(existing.credit_balance || 0)}) :`);
-      if (raw == null) return;
-      const amount = parseFloat(raw);
-      if (!amount || amount <= 0) { toast('Montant invalide.'); return; }
-      try {
-        const { error } = await supa.rpc('record_customer_payment', { p_customer_id: id, p_amount: amount });
-        if (error) throw error;
-        backdrop.remove();
-        toast('Paiement enregistré.');
-        await loadCustomers();
-      } catch (err) {
-        console.error(err);
-        toast("Erreur lors de l'enregistrement du paiement.");
-      }
+    document.getElementById('recordPaymentBtn')?.addEventListener('click', () => {
+      const due = Number(existing.credit_balance) || 0;
+      backdrop.remove();
+      openFormSheet({
+        title: 'Paiement sur crédit comptoir',
+        intro: `${escapeHtml(existing.name)} — crédit dû : <strong>${fmtFCFA(due)}</strong>`,
+        fields: [{ id: 'amount', type: 'number', label: 'Montant reçu (FCFA)', value: due, min: 1, step: 1, required: true }],
+        submitLabel: 'Enregistrer le paiement',
+        onSubmit: async (v) => {
+          const amount = Number(v.amount);
+          if (!(amount > 0)) throw new Error('Montant invalide.');
+          const { error } = await supa.rpc('record_customer_payment', { p_customer_id: id, p_amount: amount });
+          if (error) throw error;
+          await loadCustomers();
+          toast('Paiement enregistré.');
+        },
+      });
     });
     document.getElementById('deleteCustBtn')?.addEventListener('click', async () => {
       try {
@@ -796,6 +890,689 @@ function openCustomerSheet(id) {
   }
 }
 document.getElementById('addCustomerBtn')?.addEventListener('click', () => openCustomerSheet(null));
+
+// ---------------------------------------------------------------------------
+// Formulaire générique en feuille (remplace prompt(), peu fiable dans la
+// fenêtre de bureau). fields : [{id, label, type, value, options, required,
+// min, step, placeholder, hint}] ; onSubmit(values) peut lever une erreur,
+// affichée dans la feuille sans la fermer.
+// ---------------------------------------------------------------------------
+function openFormSheet({ title, intro, fields, submitLabel, onSubmit }) {
+  const backdrop = document.createElement('div');
+  backdrop.className = 'sheet-backdrop';
+  const fieldHtml = fields.map(f => {
+    if (f.type === 'select') {
+      return `<div class="field"><label for="ff_${f.id}">${f.label}</label>
+        <select id="ff_${f.id}">${f.options.map(o => `<option value="${escapeHtml(o.value)}" ${String(o.value) === String(f.value ?? '') ? 'selected' : ''}>${escapeHtml(o.label)}</option>`).join('')}</select></div>`;
+    }
+    if (f.type === 'checkbox') {
+      return `<label class="check-line"><input type="checkbox" id="ff_${f.id}" ${f.value ? 'checked' : ''}> ${f.label}</label>`;
+    }
+    if (f.type === 'textarea') {
+      return `<div class="field"><label for="ff_${f.id}">${f.label}</label><textarea id="ff_${f.id}" placeholder="${escapeHtml(f.placeholder || '')}">${escapeHtml(f.value ?? '')}</textarea></div>`;
+    }
+    return `<div class="field"><label for="ff_${f.id}">${f.label}</label>
+      <input id="ff_${f.id}" type="${f.type || 'text'}" value="${escapeHtml(f.value ?? '')}" ${f.required ? 'required' : ''}
+        ${f.min != null ? `min="${f.min}"` : ''} ${f.step != null ? `step="${f.step}"` : ''} ${f.type === 'number' ? 'inputmode="decimal"' : ''}
+        placeholder="${escapeHtml(f.placeholder || '')}">
+      ${f.hint ? `<div class="current-stock-hint">${f.hint}</div>` : ''}</div>`;
+  }).join('');
+  backdrop.innerHTML = `
+    <div class="sheet">
+      <div class="sheet-head"><h2>${escapeHtml(title)}</h2><button class="sheet-close" type="button">✕</button></div>
+      ${intro ? `<div class="current-stock-hint">${intro}</div>` : ''}
+      <form>
+        ${fieldHtml}
+        <p class="sheet-error"></p>
+        <button type="submit" class="btn btn-primary btn-block">${escapeHtml(submitLabel || 'Valider')}</button>
+      </form>
+    </div>`;
+  document.body.appendChild(backdrop);
+  const close = () => backdrop.remove();
+  backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(); });
+  backdrop.querySelector('.sheet-close').addEventListener('click', close);
+  const form = backdrop.querySelector('form');
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const values = {};
+    fields.forEach(f => {
+      const el = document.getElementById('ff_' + f.id);
+      values[f.id] = f.type === 'checkbox' ? el.checked : el.value;
+    });
+    const btn = form.querySelector('button[type="submit"]');
+    const errEl = form.querySelector('.sheet-error');
+    errEl.textContent = '';
+    btn.disabled = true;
+    try {
+      await onSubmit(values);
+      close();
+    } catch (err) {
+      console.error(err);
+      errEl.textContent = err.message || 'Erreur.';
+      btn.disabled = false;
+    }
+  });
+  return backdrop;
+}
+
+// ---------------------------------------------------------------------------
+// Devis & factures (module 2)
+//
+// Les factures produites ici sont des documents de gestion. En Côte d'Ivoire
+// la facture fiscalement opposable est la Facture Normalisée Électronique
+// (FNE), validée par la DGI (QR code, sceau, numéro fiscal) : l'app permet
+// d'y rattacher le numéro FNE, et le document imprimé le précise.
+// ---------------------------------------------------------------------------
+const DOC_STATUS = {
+  en_attente: { label: 'En attente', cls: 'warn' },
+  accepte:    { label: 'Accepté', cls: 'ok' },
+  refuse:     { label: 'Refusé', cls: 'bad' },
+  converti:   { label: 'Converti', cls: 'accent' },
+  brouillon:  { label: 'Brouillon', cls: '' },
+  emise:      { label: 'Émise', cls: 'accent' },
+  annulee:    { label: 'Annulée', cls: 'bad' },
+};
+const PAY_STATUS = {
+  paye:    { label: 'Payée', cls: 'ok' },
+  partiel: { label: 'Paiement partiel', cls: 'warn' },
+  impaye:  { label: 'Impayée', cls: 'bad' },
+};
+const PAY_METHODS = {
+  especes: 'Espèces', orange_money: 'Orange Money', mtn_money: 'MTN MoMo', moov_money: 'Moov Money',
+  wave: 'Wave', banque: 'Virement bancaire', cheque: 'Chèque', autre: 'Autre',
+};
+const TAX_REGIMES = ['', 'RNI', 'RSI', 'RME', 'TEE / TCE', 'Autre'];
+
+function canManageInvoices() {
+  return currentProfile && ['owner', 'gerant', 'comptable'].includes(currentProfile.role);
+}
+function invoiceRemaining(d) {
+  return Math.max(0, (Number(d.total_ttc) || 0) - (Number(d.amount_paid) || 0));
+}
+function paymentStatus(d) {
+  if (d.doc_type !== 'facture' || d.status !== 'emise') return null;
+  if (invoiceRemaining(d) <= 0) return 'paye';
+  return (Number(d.amount_paid) || 0) > 0 ? 'partiel' : 'impaye';
+}
+function docLabel(d) {
+  if (d.number) return d.number;
+  return d.doc_type === 'facture' ? 'Facture (brouillon)' : 'Devis';
+}
+function docBadges(d) {
+  const st = DOC_STATUS[d.status] || { label: d.status, cls: '' };
+  const pay = paymentStatus(d);
+  let html = `<span class="doc-badge ${st.cls}">${st.label}</span>`;
+  if (pay) html += ` <span class="doc-badge ${PAY_STATUS[pay].cls}">${PAY_STATUS[pay].label}</span>`;
+  if (d.doc_type === 'facture' && d.status === 'emise' && d.fne_number) html += ` <span class="doc-badge ok">FNE</span>`;
+  return html;
+}
+function fmtDate(s) {
+  if (!s) return '—';
+  const d = new Date(s.length === 10 ? s + 'T00:00:00' : s);
+  return d.toLocaleDateString('fr-FR');
+}
+// Même règle de calcul que la base (recompute_document_totals) : prix TTC,
+// HT déduit sur le total pour éviter les écarts d'arrondi.
+function computeTotals(lines, vatApplicable, vatRate) {
+  const ttc = lines.reduce((s, l) => s + Math.round((Number(l.qty) || 0) * (Number(l.unit_price_ttc) || 0)), 0);
+  const ht = (vatApplicable && vatRate > 0) ? Math.round(ttc / (1 + vatRate / 100)) : ttc;
+  return { ttc, ht, vat: ttc - ht };
+}
+function customerInvoiceDue(customerId) {
+  return Object.values(salesDocs)
+    .filter(d => d.customer_id === customerId && d.doc_type === 'facture' && d.status === 'emise')
+    .reduce((s, d) => s + invoiceRemaining(d), 0);
+}
+
+async function loadShopInfo() {
+  if (!currentProfile?.shop_id) return;
+  const { data, error } = await supa.from('shops').select('*').eq('id', currentProfile.shop_id).single();
+  if (error) { console.error(error); return; }
+  shopInfo = data;
+}
+
+async function loadSalesDocuments() {
+  const { data, error } = await supa
+    .from('sales_documents')
+    .select('*, sales_document_lines(*), invoice_payments(*)')
+    .order('created_at', { ascending: false })
+    .limit(500);
+  if (error) { console.error(error); return; }
+  salesDocs = {};
+  (data || []).forEach(d => {
+    d.sales_document_lines = (d.sales_document_lines || []).slice().sort((a, b) => a.position - b.position);
+    d.invoice_payments = (d.invoice_payments || []).slice().sort((a, b) => new Date(a.paid_at) - new Date(b.paid_at));
+    salesDocs[d.id] = d;
+  });
+  renderSalesDocs();
+  renderCustomers();
+  renderDashboard();
+}
+
+function renderSalesDocs() {
+  const host = document.getElementById('docList');
+  if (!host) return;
+  const filter = document.getElementById('docFilter')?.value || '';
+  const search = (document.getElementById('docSearchInput')?.value || '').trim().toLowerCase();
+  let list = Object.entries(salesDocs);
+  if (filter === 'devis' || filter === 'facture') list = list.filter(([, d]) => d.doc_type === filter);
+  if (filter === 'impayees') list = list.filter(([, d]) => ['impaye', 'partiel'].includes(paymentStatus(d)));
+  if (filter === 'brouillons') list = list.filter(([, d]) => d.status === 'brouillon');
+  if (search) {
+    list = list.filter(([, d]) =>
+      (d.number || '').toLowerCase().includes(search) ||
+      (d.customer_name || '').toLowerCase().includes(search) ||
+      (d.fne_number || '').toLowerCase().includes(search));
+  }
+  if (list.length === 0) {
+    host.innerHTML = `<div class="empty-state">${Object.keys(salesDocs).length === 0
+      ? 'Aucun devis ni facture. Créez le premier ci-dessus.'
+      : 'Aucun document ne correspond.'}</div>`;
+    return;
+  }
+  host.innerHTML = list.map(([id, d]) => {
+    const pay = paymentStatus(d);
+    const right = pay && pay !== 'paye'
+      ? `<div class="qty bad">${fmtFCFA(invoiceRemaining(d))}<span class="unit">reste dû</span></div>`
+      : `<div class="qty">${fmtFCFA(d.total_ttc)}<span class="unit">${d.doc_type === 'devis' ? 'devis' : 'TTC'}</span></div>`;
+    return `
+      <div class="article-row" data-id="${id}">
+        <div class="info">
+          <div class="name">${escapeHtml(docLabel(d))}</div>
+          <div class="meta">${escapeHtml(d.customer_name || 'Client non renseigné')} · ${fmtDate(d.issue_date || d.created_at)} ${docBadges(d)}</div>
+        </div>
+        ${right}
+      </div>`;
+  }).join('');
+  host.querySelectorAll('.article-row').forEach(row => {
+    row.addEventListener('click', () => openDocumentView(row.dataset.id));
+  });
+}
+document.getElementById('docFilter')?.addEventListener('change', renderSalesDocs);
+document.getElementById('docSearchInput')?.addEventListener('input', renderSalesDocs);
+
+// ---- Éditeur (création / modification d'un devis ou d'une facture brouillon)
+function openDocumentEditor(docType, id = null) {
+  const existing = id ? salesDocs[id] : null;
+  const vatApplicable = shopInfo ? shopInfo.vat_applicable !== false : true;
+  const vatRate = shopInfo ? Number(shopInfo.vat_rate ?? 18) : 18;
+  let lines = existing
+    ? existing.sales_document_lines.map(l => ({ article_id: l.article_id || '', description: l.description, qty: l.qty, unit_price_ttc: Number(l.unit_price_ttc) }))
+    : [{ article_id: '', description: '', qty: 1, unit_price_ttc: '' }];
+
+  const articleOptions = Object.entries(articles)
+    .sort((a, b) => a[1].name.localeCompare(b[1].name, 'fr'))
+    .map(([aid, a]) => `<option value="${aid}">${escapeHtml(a.name)} (${a.qty ?? 0} en stock)</option>`).join('');
+  const customerOptions = Object.entries(customers)
+    .sort((a, b) => a[1].name.localeCompare(b[1].name, 'fr'))
+    .map(([cid, c]) => `<option value="${cid}" ${existing?.customer_id === cid ? 'selected' : ''}>${escapeHtml(c.name)}</option>`).join('');
+
+  const isQuote = docType === 'devis';
+  const title = existing ? `Modifier ${isQuote ? 'le devis' : 'la facture'}` : (isQuote ? 'Nouveau devis' : 'Nouvelle facture');
+  const backdrop = document.createElement('div');
+  backdrop.className = 'sheet-backdrop';
+  backdrop.innerHTML = `
+    <div class="sheet">
+      <div class="sheet-head"><h2>${title}</h2><button class="sheet-close" type="button">✕</button></div>
+      <form id="docEditorForm">
+        <div class="field">
+          <label for="docCustomer">Client</label>
+          <select id="docCustomer"><option value="">— Client non enregistré —</option>${customerOptions}</select>
+        </div>
+        <div class="field" id="docCustomerNameField">
+          <label for="docCustomerName">Nom du client (facultatif)</label>
+          <input id="docCustomerName" value="${escapeHtml(existing && !existing.customer_id ? existing.customer_name || '' : '')}" placeholder="Ex : Client comptoir">
+        </div>
+        <div class="doc-lines" id="docLines"></div>
+        <button type="button" class="btn btn-ghost btn-block" id="addDocLineBtn">+ Ajouter une ligne</button>
+        <div class="doc-totals" id="docTotals"></div>
+        ${isQuote
+          ? `<div class="field"><label for="docValidUntil">Valable jusqu'au</label><input id="docValidUntil" type="date" value="${existing?.valid_until || ''}"></div>`
+          : `<div class="field"><label for="docDueDate">Date d'échéance (facultatif)</label><input id="docDueDate" type="date" value="${existing?.due_date || ''}"></div>`}
+        <div class="field"><label for="docNotes">Notes (imprimées sur le document)</label><textarea id="docNotes" placeholder="Ex : Livraison incluse, garantie 6 mois">${escapeHtml(existing?.notes || '')}</textarea></div>
+        ${!isQuote ? `<label class="check-line"><input type="checkbox" id="docApplyStock" checked> Sortir les articles du stock à l'émission</label>
+          <div class="current-stock-hint">Décochez si ces ventes ont déjà été enregistrées au comptoir (évite de compter le stock deux fois).</div>` : ''}
+        <p class="sheet-error" id="docEditorError"></p>
+        <button type="submit" class="btn btn-primary btn-block" data-action="save">${isQuote ? 'Enregistrer le devis' : 'Enregistrer le brouillon'}</button>
+        ${!isQuote ? '<button type="button" class="btn btn-ghost btn-block" id="docSaveIssueBtn">Enregistrer et émettre la facture</button>' : ''}
+      </form>
+    </div>`;
+  document.body.appendChild(backdrop);
+  const close = () => backdrop.remove();
+  backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(); });
+  backdrop.querySelector('.sheet-close').addEventListener('click', close);
+
+  const customerSelect = document.getElementById('docCustomer');
+  const customerNameField = document.getElementById('docCustomerNameField');
+  function syncCustomerField() { customerNameField.hidden = !!customerSelect.value; }
+  customerSelect.addEventListener('change', syncCustomerField);
+  syncCustomerField();
+
+  function renderTotals() {
+    const t = computeTotals(lines, vatApplicable, vatRate);
+    document.getElementById('docTotals').innerHTML = vatApplicable
+      ? `<div><span>Total HT</span><span>${fmtFCFA(t.ht)}</span></div>
+         <div><span>TVA ${vatRate} %</span><span>${fmtFCFA(t.vat)}</span></div>
+         <div class="grand"><span>Total TTC</span><span>${fmtFCFA(t.ttc)}</span></div>`
+      : `<div class="grand"><span>Total (TVA non applicable)</span><span>${fmtFCFA(t.ttc)}</span></div>`;
+  }
+
+  function renderLines() {
+    const host = document.getElementById('docLines');
+    host.innerHTML = lines.map((l, i) => `
+      <div class="doc-line" data-idx="${i}">
+        <label class="full">Article
+          <select data-f="article_id"><option value="">— Ligne libre (service, article hors stock) —</option>${articleOptions}</select>
+        </label>
+        <label class="full">Désignation
+          <input data-f="description" value="${escapeHtml(l.description)}" placeholder="Désignation">
+        </label>
+        <label>Quantité<input data-f="qty" type="number" min="1" step="1" inputmode="numeric" value="${l.qty}"></label>
+        <label>Prix unitaire TTC<input data-f="unit_price_ttc" type="number" min="0" step="1" inputmode="numeric" value="${l.unit_price_ttc}"></label>
+        <div class="line-foot">
+          <button type="button" class="remove-line" ${lines.length === 1 ? 'hidden' : ''}>Retirer la ligne</button>
+          <strong data-total>${fmtFCFA(Math.round((Number(l.qty) || 0) * (Number(l.unit_price_ttc) || 0)))}</strong>
+        </div>
+      </div>`).join('');
+    host.querySelectorAll('.doc-line').forEach(row => {
+      const i = Number(row.dataset.idx);
+      const sel = row.querySelector('[data-f="article_id"]');
+      sel.value = lines[i].article_id || '';
+      const desc = row.querySelector('[data-f="description"]');
+      const qty = row.querySelector('[data-f="qty"]');
+      const price = row.querySelector('[data-f="unit_price_ttc"]');
+      const refreshLineTotal = () => {
+        row.querySelector('[data-total]').textContent = fmtFCFA(Math.round((Number(lines[i].qty) || 0) * (Number(lines[i].unit_price_ttc) || 0)));
+        renderTotals();
+      };
+      sel.addEventListener('change', () => {
+        lines[i].article_id = sel.value;
+        const a = articles[sel.value];
+        if (a) {
+          lines[i].description = a.name;
+          lines[i].unit_price_ttc = Number(a.sell_price) || 0;
+          desc.value = lines[i].description;
+          price.value = lines[i].unit_price_ttc;
+        }
+        refreshLineTotal();
+      });
+      desc.addEventListener('input', () => { lines[i].description = desc.value; });
+      qty.addEventListener('input', () => { lines[i].qty = qty.value; refreshLineTotal(); });
+      price.addEventListener('input', () => { lines[i].unit_price_ttc = price.value; refreshLineTotal(); });
+      row.querySelector('.remove-line').addEventListener('click', () => {
+        lines.splice(i, 1);
+        renderLines();
+      });
+    });
+    renderTotals();
+  }
+  renderLines();
+
+  document.getElementById('addDocLineBtn').addEventListener('click', () => {
+    lines.push({ article_id: '', description: '', qty: 1, unit_price_ttc: '' });
+    renderLines();
+    const rows = document.querySelectorAll('#docLines .doc-line');
+    rows[rows.length - 1]?.scrollIntoView({ block: 'nearest' });
+  });
+
+  async function save(andIssue) {
+    const errEl = document.getElementById('docEditorError');
+    errEl.textContent = '';
+    const cleaned = lines
+      .filter(l => l.article_id || String(l.description).trim())
+      .map(l => ({
+        article_id: l.article_id || null,
+        description: String(l.description || '').trim(),
+        qty: parseInt(l.qty, 10),
+        unit_price_ttc: Number(l.unit_price_ttc),
+      }));
+    if (cleaned.length === 0) { errEl.textContent = 'Ajoutez au moins une ligne.'; return; }
+    if (cleaned.some(l => !(l.qty > 0))) { errEl.textContent = 'Chaque ligne doit avoir une quantité d\'au moins 1.'; return; }
+    if (cleaned.some(l => !(l.unit_price_ttc >= 0) || String(l.unit_price_ttc) === 'NaN')) { errEl.textContent = 'Chaque ligne doit avoir un prix.'; return; }
+    if (!navigator.onLine) { errEl.textContent = 'Les devis et factures nécessitent une connexion internet.'; return; }
+
+    const buttons = backdrop.querySelectorAll('button');
+    buttons.forEach(b => b.disabled = true);
+    try {
+      const { data: docId, error } = await supa.rpc('save_sales_document', {
+        p_id: existing ? id : null,
+        p_doc_type: docType,
+        p_customer_id: customerSelect.value || null,
+        p_customer_name: customerSelect.value ? null : document.getElementById('docCustomerName').value,
+        p_lines: cleaned,
+        p_notes: document.getElementById('docNotes').value,
+        p_valid_until: isQuote ? (document.getElementById('docValidUntil').value || null) : null,
+        p_due_date: !isQuote ? (document.getElementById('docDueDate').value || null) : null,
+      });
+      if (error) throw error;
+      let number = null;
+      if (andIssue) {
+        const applyStock = document.getElementById('docApplyStock').checked;
+        const { data, error: issueError } = await supa.rpc('issue_invoice', { p_id: docId, p_apply_stock: applyStock });
+        if (issueError) {
+          // Le brouillon est bien enregistré : on recharge pour qu'il apparaisse.
+          await loadSalesDocuments();
+          throw new Error(`Brouillon enregistré, mais émission impossible : ${issueError.message}`);
+        }
+        number = data;
+      }
+      markActivity();
+      await loadSalesDocuments();
+      if (andIssue) { loadArticles(); loadMovements(); }
+      close();
+      toast(number ? `Facture ${number} émise.` : (isQuote ? 'Devis enregistré.' : 'Brouillon enregistré.'));
+      openDocumentView(docId);
+    } catch (err) {
+      console.error(err);
+      errEl.textContent = err.message || "Erreur lors de l'enregistrement.";
+      buttons.forEach(b => b.disabled = false);
+    }
+  }
+  document.getElementById('docEditorForm').addEventListener('submit', (e) => { e.preventDefault(); save(false); });
+  document.getElementById('docSaveIssueBtn')?.addEventListener('click', () => save(true));
+}
+
+// ---- Fiche détail d'un document
+function openDocumentView(id) {
+  const d = salesDocs[id];
+  if (!d) return;
+  const isQuote = d.doc_type === 'devis';
+  const manager = canManageInvoices();
+  const pay = paymentStatus(d);
+  const remaining = invoiceRemaining(d);
+
+  const actions = [];
+  if (isQuote && ['en_attente', 'accepte'].includes(d.status)) actions.push(['convert', 'Convertir en facture', 'primary']);
+  if (!isQuote && d.status === 'brouillon') actions.push(['issue', 'Émettre la facture', 'primary']);
+  if (!isQuote && d.status === 'emise' && remaining > 0) actions.push(['pay', 'Enregistrer un paiement', 'primary']);
+  actions.push(['print', 'Imprimer / PDF', 'ghost']);
+  if ((isQuote && d.status === 'en_attente') || (!isQuote && d.status === 'brouillon')) actions.push(['edit', 'Modifier', 'ghost']);
+  if (isQuote && d.status === 'en_attente') actions.push(['accept', 'Marquer accepté', 'ghost'], ['refuse', 'Marquer refusé', 'ghost']);
+  if (isQuote && ['accepte', 'refuse'].includes(d.status)) actions.push(['reopen', 'Remettre en attente', 'ghost']);
+  if (!isQuote && d.status === 'emise' && manager) actions.push(['fne', d.fne_number ? 'Modifier le n° FNE' : 'Renseigner le n° FNE', 'ghost']);
+  if (isQuote && d.status === 'converti') {
+    const inv = Object.values(salesDocs).find(x => x.source_quote_id === d.id);
+    if (inv) actions.push(['goto:' + inv.id, 'Voir la facture', 'ghost']);
+  }
+  if (!isQuote && d.source_quote_id && salesDocs[d.source_quote_id]) actions.push(['goto:' + d.source_quote_id, 'Voir le devis d\'origine', 'ghost']);
+  if (!isQuote && d.status === 'emise' && manager && (Number(d.amount_paid) || 0) === 0) actions.push(['cancel', 'Annuler la facture', 'ghost']);
+  if ((isQuote && d.status !== 'converti') || (!isQuote && d.status === 'brouillon')) actions.push(['delete', 'Supprimer', 'ghost']);
+
+  const totalsHtml = d.vat_applicable
+    ? `<div><span>Total HT</span><span>${fmtFCFA(d.total_ht)}</span></div>
+       <div><span>TVA ${Number(d.vat_rate)} %</span><span>${fmtFCFA(d.total_vat)}</span></div>
+       <div class="grand"><span>Total TTC</span><span>${fmtFCFA(d.total_ttc)}</span></div>`
+    : `<div class="grand"><span>Total (TVA non applicable)</span><span>${fmtFCFA(d.total_ttc)}</span></div>`;
+  const paymentsHtml = !isQuote && d.status !== 'brouillon' ? `
+    <h3>Paiements</h3>
+    ${d.invoice_payments.length === 0 ? '<div class="current-stock-hint">Aucun paiement enregistré.</div>' : `
+      <div class="doc-view-lines">${d.invoice_payments.map(p => `
+        <div class="doc-view-line"><div class="d">${PAY_METHODS[p.method] || p.method}<small>${fmtDate(p.paid_at)}${p.reference ? ' · Réf. ' + escapeHtml(p.reference) : ''}</small></div>
+        <div class="t">${fmtFCFA(p.amount)}</div></div>`).join('')}</div>`}
+    <div class="doc-totals">
+      <div><span>Déjà payé</span><span>${fmtFCFA(d.amount_paid)}</span></div>
+      <div class="${remaining > 0 ? 'due' : ''}"><span>Reste à payer</span><span>${fmtFCFA(remaining)}</span></div>
+    </div>` : '';
+  const fneHtml = !isQuote && d.status !== 'brouillon' ? `
+    <div class="fne-note">${d.fne_number
+      ? `<strong>FNE n° ${escapeHtml(d.fne_number)}</strong> — enregistrée le ${fmtDate(d.fne_recorded_at)}.`
+      : `Document de gestion. La facture fiscale officielle est la <strong>FNE</strong>, à émettre sur la plateforme de la DGI ; renseignez ensuite son numéro ici pour garder le lien.`}</div>` : '';
+
+  const backdrop = document.createElement('div');
+  backdrop.className = 'sheet-backdrop';
+  backdrop.innerHTML = `
+    <div class="sheet">
+      <div class="sheet-head"><h2>${isQuote ? 'Devis' : 'Facture'} ${escapeHtml(d.number || '(brouillon)')}</h2><button class="sheet-close" type="button">✕</button></div>
+      <div>${docBadges(d)}</div>
+      <div class="doc-meta">
+        <div>Client : <strong>${escapeHtml(d.customer_name || 'Non renseigné')}</strong>${d.customer_phone ? ' · ' + escapeHtml(d.customer_phone) : ''}</div>
+        <div>Date : <strong>${fmtDate(d.issue_date || d.created_at)}</strong>${isQuote && d.valid_until ? ` · Valable jusqu'au <strong>${fmtDate(d.valid_until)}</strong>` : ''}${!isQuote && d.due_date ? ` · Échéance <strong>${fmtDate(d.due_date)}</strong>` : ''}</div>
+        ${!isQuote && d.status === 'emise' ? `<div>Stock : ${d.stock_applied ? 'sorti à l\'émission' : 'non modifié par cette facture'}</div>` : ''}
+        ${d.status === 'annulee' ? `<div>Motif d'annulation : <strong>${escapeHtml(d.cancel_reason || '')}</strong></div>` : ''}
+      </div>
+      <div class="doc-view-lines">${d.sales_document_lines.map(l => `
+        <div class="doc-view-line"><div class="d">${escapeHtml(l.description)}<small>${l.qty} × ${fmtFCFA(l.unit_price_ttc)}</small></div>
+        <div class="t">${fmtFCFA(l.line_total_ttc)}</div></div>`).join('')}</div>
+      <div class="doc-totals">${totalsHtml}</div>
+      ${d.notes ? `<div class="current-stock-hint">Notes : ${escapeHtml(d.notes)}</div>` : ''}
+      ${paymentsHtml}
+      ${fneHtml}
+      <div style="display:flex; flex-direction:column; gap:8px">
+        ${actions.map(([key, label, kind]) => `<button type="button" class="btn btn-${kind} btn-block" data-action="${key}">${label}</button>`).join('')}
+      </div>
+    </div>`;
+  document.body.appendChild(backdrop);
+  const close = () => backdrop.remove();
+  backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(); });
+  backdrop.querySelector('.sheet-close').addEventListener('click', close);
+
+  async function run(rpc, params, okMsg, reopen = true) {
+    if (!navigator.onLine) { toast('Connexion internet nécessaire.'); return null; }
+    const { data, error } = await supa.rpc(rpc, params);
+    if (error) { console.error(error); toast(error.message || 'Erreur.'); return null; }
+    markActivity();
+    await loadSalesDocuments();
+    if (okMsg) toast(okMsg);
+    close();
+    if (reopen) openDocumentView(typeof reopen === 'string' ? reopen : id);
+    return data ?? true;
+  }
+
+  backdrop.querySelectorAll('[data-action]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const action = btn.dataset.action;
+      if (action.startsWith('goto:')) { close(); openDocumentView(action.slice(5)); return; }
+      switch (action) {
+        case 'print': printDocument(id); break;
+        case 'edit': close(); openDocumentEditor(d.doc_type, id); break;
+        case 'accept': await run('set_quote_status', { p_id: id, p_status: 'accepte' }, 'Devis marqué accepté.'); break;
+        case 'refuse': await run('set_quote_status', { p_id: id, p_status: 'refuse' }, 'Devis marqué refusé.'); break;
+        case 'reopen': await run('set_quote_status', { p_id: id, p_status: 'en_attente' }, 'Devis remis en attente.'); break;
+        case 'convert': {
+          if (!navigator.onLine) { toast('Connexion internet nécessaire.'); return; }
+          const { data: newId, error } = await supa.rpc('convert_quote_to_invoice', { p_id: id });
+          if (error) { toast(error.message); return; }
+          await loadSalesDocuments();
+          close();
+          toast('Facture brouillon créée à partir du devis.');
+          openDocumentView(newId);
+          break;
+        }
+        case 'issue':
+          close();
+          openFormSheet({
+            title: 'Émettre la facture',
+            intro: `Une fois émise, la facture reçoit un numéro définitif et ne peut plus être modifiée (seulement annulée). Montant : <strong>${fmtFCFA(d.total_ttc)}</strong>.`,
+            fields: [{ id: 'stock', type: 'checkbox', label: "Sortir les articles du stock à l'émission", value: true }],
+            submitLabel: 'Émettre',
+            onSubmit: async (v) => {
+              const { data: number, error } = await supa.rpc('issue_invoice', { p_id: id, p_apply_stock: v.stock });
+              if (error) throw error;
+              markActivity();
+              await loadSalesDocuments();
+              loadArticles(); loadMovements();
+              toast(`Facture ${number} émise.`);
+              setTimeout(() => openDocumentView(id), 0);
+            },
+          });
+          break;
+        case 'pay':
+          close();
+          openFormSheet({
+            title: 'Enregistrer un paiement',
+            intro: `Facture ${escapeHtml(d.number)} — reste à payer : <strong>${fmtFCFA(remaining)}</strong>`,
+            fields: [
+              { id: 'amount', type: 'number', label: 'Montant reçu (FCFA)', value: remaining, min: 1, step: 1, required: true },
+              { id: 'method', type: 'select', label: 'Moyen de paiement', value: 'especes',
+                options: Object.entries(PAY_METHODS).map(([value, label]) => ({ value, label })) },
+              { id: 'reference', label: 'Référence (n° de transaction, chèque…)', placeholder: 'Facultatif' },
+            ],
+            submitLabel: 'Enregistrer le paiement',
+            onSubmit: async (v) => {
+              const amount = Number(v.amount);
+              if (!(amount > 0)) throw new Error('Montant invalide.');
+              if (amount > remaining) throw new Error(`Le montant dépasse le reste à payer (${fmtFCFA(remaining)}).`);
+              const { error } = await supa.rpc('record_invoice_payment', { p_id: id, p_amount: amount, p_method: v.method, p_reference: v.reference || null });
+              if (error) throw error;
+              markActivity();
+              await loadSalesDocuments();
+              toast('Paiement enregistré.');
+              setTimeout(() => openDocumentView(id), 0);
+            },
+          });
+          break;
+        case 'fne':
+          close();
+          openFormSheet({
+            title: 'Numéro FNE',
+            intro: 'Saisissez le numéro de la Facture Normalisée Électronique émise sur la plateforme de la DGI pour cette vente. Laissez vide pour retirer le lien.',
+            fields: [{ id: 'fne', label: 'N° FNE', value: d.fne_number || '' }],
+            submitLabel: 'Enregistrer',
+            onSubmit: async (v) => {
+              const { error } = await supa.rpc('set_invoice_fne', { p_id: id, p_fne_number: v.fne });
+              if (error) throw error;
+              await loadSalesDocuments();
+              toast('Numéro FNE enregistré.');
+              setTimeout(() => openDocumentView(id), 0);
+            },
+          });
+          break;
+        case 'cancel':
+          close();
+          openFormSheet({
+            title: 'Annuler la facture',
+            intro: `La facture ${escapeHtml(d.number)} sera conservée avec le statut « Annulée » (le numéro n'est jamais réutilisé).${d.stock_applied ? ' Les articles seront remis en stock.' : ''}`,
+            fields: [{ id: 'reason', label: "Motif d'annulation", required: true, placeholder: 'Ex : erreur de saisie' }],
+            submitLabel: 'Confirmer l\'annulation',
+            onSubmit: async (v) => {
+              if (!v.reason.trim()) throw new Error('Le motif est obligatoire.');
+              const { error } = await supa.rpc('cancel_invoice', { p_id: id, p_reason: v.reason });
+              if (error) throw error;
+              markActivity();
+              await loadSalesDocuments();
+              loadArticles(); loadMovements();
+              toast('Facture annulée.');
+              setTimeout(() => openDocumentView(id), 0);
+            },
+          });
+          break;
+        case 'delete':
+          close();
+          openFormSheet({
+            title: isQuote ? 'Supprimer le devis' : 'Supprimer le brouillon',
+            intro: `${escapeHtml(docLabel(d))} sera définitivement supprimé.`,
+            fields: [],
+            submitLabel: 'Supprimer',
+            onSubmit: async () => {
+              const { error } = await supa.rpc('delete_sales_document', { p_id: id });
+              if (error) throw error;
+              await loadSalesDocuments();
+              toast('Document supprimé.');
+            },
+          });
+          break;
+      }
+    });
+  });
+}
+
+// ---- Réglages boutique (en-tête des documents, TVA)
+function openShopSettingsSheet() {
+  const s = shopInfo || {};
+  openFormSheet({
+    title: 'Infos boutique',
+    intro: 'Ces informations apparaissent en en-tête des devis et factures imprimés.',
+    fields: [
+      { id: 'name', label: 'Nom commercial', value: s.name || '', required: true },
+      { id: 'legal_name', label: 'Raison sociale (si différente)', value: s.legal_name || '' },
+      { id: 'address', label: 'Adresse', value: s.address || '', placeholder: 'Ex : Cocody Angré, Abidjan' },
+      { id: 'phone', label: 'Téléphone', value: s.phone || '' },
+      { id: 'email', label: 'Email', type: 'email', value: s.email || '' },
+      { id: 'ncc', label: 'N° de compte contribuable (NCC)', value: s.ncc || '' },
+      { id: 'rccm', label: 'RCCM', value: s.rccm || '' },
+      { id: 'tax_regime', type: 'select', label: 'Régime d\'imposition', value: s.tax_regime || '',
+        options: TAX_REGIMES.map(r => ({ value: r, label: r || '— Non renseigné —' })) },
+      { id: 'vat_applicable', type: 'checkbox', label: 'Boutique assujettie à la TVA', value: s.vat_applicable !== false },
+      { id: 'vat_rate', type: 'number', label: 'Taux de TVA (%)', value: s.vat_rate ?? 18, min: 0, step: 0.01,
+        hint: 'Taux normal en Côte d\'Ivoire : 18 %. Les nouveaux documents utilisent ce réglage ; les documents déjà émis ne changent pas.' },
+      { id: 'invoice_footer', type: 'textarea', label: 'Pied de page (conditions, coordonnées bancaires…)', value: s.invoice_footer || '' },
+    ],
+    submitLabel: 'Enregistrer',
+    onSubmit: async (v) => {
+      const { error } = await supa.rpc('update_shop_settings', { p_settings: { ...v, vat_rate: Number(v.vat_rate) } });
+      if (error) throw error;
+      await loadShopInfo();
+      toast('Infos boutique enregistrées.');
+    },
+  });
+}
+
+// ---- Impression (le dialogue système permet aussi « Enregistrer en PDF »)
+function buildPrintableHtml(d, s) {
+  const isQuote = d.doc_type === 'devis';
+  const shopName = s.legal_name || s.name || 'Boutique';
+  const idLines = [
+    s.legal_name && s.name && s.legal_name !== s.name ? `Enseigne : ${escapeHtml(s.name)}` : '',
+    s.address ? escapeHtml(s.address) : '',
+    [s.phone, s.email].filter(Boolean).map(escapeHtml).join(' · '),
+    [s.ncc ? `NCC : ${escapeHtml(s.ncc)}` : '', s.rccm ? `RCCM : ${escapeHtml(s.rccm)}` : '', s.tax_regime ? `Régime : ${escapeHtml(s.tax_regime)}` : ''].filter(Boolean).join(' · '),
+  ].filter(Boolean).map(x => `<div>${x}</div>`).join('');
+  const totals = d.vat_applicable
+    ? `<div><span>Total HT</span><span>${fmtFCFA(d.total_ht)}</span></div>
+       <div><span>TVA ${Number(d.vat_rate)} %</span><span>${fmtFCFA(d.total_vat)}</span></div>
+       <div class="grand"><span>Total TTC</span><span>${fmtFCFA(d.total_ttc)}</span></div>`
+    : `<div class="grand"><span>Total</span><span>${fmtFCFA(d.total_ttc)}</span></div>
+       <div style="font-size:8.5pt;color:#555">TVA non applicable</div>`;
+  const payBlock = !isQuote && d.status === 'emise' && (Number(d.amount_paid) || 0) > 0
+    ? `<div><span>Déjà payé</span><span>${fmtFCFA(d.amount_paid)}</span></div>
+       <div><span>Reste à payer</span><span>${fmtFCFA(invoiceRemaining(d))}</span></div>` : '';
+  let stamp = '';
+  if (d.status === 'brouillon') stamp = '<div class="pstamp">BROUILLON — NON ÉMIS</div>';
+  if (d.status === 'annulee') stamp = '<div class="pstamp">ANNULÉE</div>';
+  if (isQuote && d.status === 'refuse') stamp = '<div class="pstamp">REFUSÉ</div>';
+  const legal = isQuote
+    ? `Devis valable jusqu'au ${fmtDate(d.valid_until)}. Prix exprimés en francs CFA${d.vat_applicable ? ', TVA comprise' : ''}.`
+    : (d.fne_number
+        ? `Facture rattachée à la Facture Normalisée Électronique (FNE) n° ${escapeHtml(d.fne_number)} émise via la plateforme de la DGI.`
+        : `Document de gestion interne. La facture fiscale opposable est la Facture Normalisée Électronique (FNE) délivrée via la plateforme de la DGI.`);
+  return `
+    <div class="pdoc">
+      <div class="phead">
+        <div class="pshop"><h1>${escapeHtml(shopName)}</h1>${idLines}</div>
+        <div class="pinfo">
+          <div class="ptitle">${isQuote ? 'DEVIS' : 'FACTURE'}</div>
+          <div><strong>N° ${escapeHtml(d.number || '—')}</strong></div>
+          <div>Date : ${fmtDate(d.issue_date || d.created_at)}</div>
+          ${!isQuote && d.due_date ? `<div>Échéance : ${fmtDate(d.due_date)}</div>` : ''}
+          ${stamp}
+        </div>
+      </div>
+      <div class="pclient">
+        <div class="lbl">${isQuote ? 'Devis établi pour' : 'Facturé à'}</div>
+        <div><strong>${escapeHtml(d.customer_name || 'Client')}</strong></div>
+        ${d.customer_phone ? `<div>${escapeHtml(d.customer_phone)}</div>` : ''}
+      </div>
+      <table>
+        <thead><tr><th>Désignation</th><th class="n">Qté</th><th class="n">Prix unit. TTC</th><th class="n">Total TTC</th></tr></thead>
+        <tbody>${d.sales_document_lines.map(l => `
+          <tr><td>${escapeHtml(l.description)}</td><td class="n">${l.qty}</td><td class="n">${fmtFCFA(l.unit_price_ttc)}</td><td class="n">${fmtFCFA(l.line_total_ttc)}</td></tr>`).join('')}
+        </tbody>
+      </table>
+      <div class="ptotals">${totals}${payBlock}</div>
+      ${d.notes ? `<div class="pnotes"><strong>Notes :</strong> ${escapeHtml(d.notes)}</div>` : ''}
+      <div class="plegal">${legal}${s.invoice_footer ? `<div style="margin-top:4px">${escapeHtml(s.invoice_footer)}</div>` : ''}</div>
+    </div>`;
+}
+function printDocument(id) {
+  const d = salesDocs[id];
+  if (!d) return;
+  document.getElementById('printArea').innerHTML = buildPrintableHtml(d, shopInfo || {});
+  setTimeout(() => window.print(), 50);
+}
+
+document.getElementById('newQuoteBtn')?.addEventListener('click', () => openDocumentEditor('devis'));
+document.getElementById('newInvoiceBtn')?.addEventListener('click', () => openDocumentEditor('facture'));
+document.getElementById('shopSettingsBtn')?.addEventListener('click', openShopSettingsSheet);
 
 // ---------------------------------------------------------------------------
 // Tableau de bord — indicateurs du jour et des 7 derniers jours, construits
@@ -826,11 +1603,17 @@ function renderDashboard() {
   const lowStock = list.filter(([, a]) => (a.qty || 0) <= (a.threshold ?? 3) && (a.qty || 0) > 0);
   const outStock = list.filter(([, a]) => (a.qty || 0) <= 0);
   const alertCount = lowStock.length + outStock.length;
+  const unpaidInvoices = Object.values(salesDocs).reduce((acc, d) => {
+    const r = (d.doc_type === 'facture' && d.status === 'emise') ? invoiceRemaining(d) : 0;
+    if (r > 0) { acc.count += 1; acc.total += r; }
+    return acc;
+  }, { count: 0, total: 0 });
 
   document.getElementById('dashboardTiles').innerHTML = `
     <div class="tile"><div class="label">Ventes aujourd'hui</div><div class="value">${unitsSoldToday}</div></div>
     ${gerant ? `<div class="tile"><div class="label">CA aujourd'hui</div><div class="value small">${fmtFCFA(revenueToday)}</div></div>` : ''}
     ${gerant ? `<div class="tile"><div class="label">Marge 7 jours</div><div class="value small">${fmtFCFA(margin7d)}</div></div>` : ''}
+    ${gerant && unpaidInvoices.count > 0 ? `<div class="tile"><div class="label">Factures impayées (${unpaidInvoices.count})</div><div class="value small">${fmtFCFA(unpaidInvoices.total)}</div></div>` : ''}
   `;
 
   document.getElementById('dashboardAlert').innerHTML = alertCount > 0
@@ -867,6 +1650,8 @@ function renderDashboard() {
 function applyRoleToUI() {
   const gerant = isGerant();
   document.getElementById('articlesTabBtn').hidden = !gerant;
+  document.getElementById('ventesTabBtn').hidden = currentProfile.role === 'livreur';
+  document.getElementById('shopSettingsBtn').hidden = !gerant;
   // Si le vendeur était sur l'onglet Articles au moment où le rôle se charge, on le ramène sur Stock
   if (!gerant && currentTab === 'articles') {
     currentTab = 'stock';
@@ -1099,7 +1884,7 @@ document.getElementById('addArticleBtn').addEventListener('click', () => openArt
 // Export Excel
 // ---------------------------------------------------------------------------
 function buildWorkbook() {
-  const kindWord = { vente: 'Vente', reassort: 'Réassort', perte: 'Casse/Perte' };
+  const kindWord = { vente: 'Vente', reassort: 'Réassort', perte: 'Casse/Perte', retour: 'Retour' };
 
   const articleRows = Object.values(articles)
     .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
@@ -1585,6 +2370,7 @@ function showLogin() {
   document.getElementById('fixedPanel-stock').hidden = true;
   document.getElementById('fixedPanel-historique').hidden = true;
   document.getElementById('fixedPanel-clients').hidden = true;
+  document.getElementById('fixedPanel-ventes').hidden = true;
   document.getElementById('fixedPanel-articles').hidden = true;
   document.getElementById('offlineStatus').hidden = true;
   document.getElementById('pendingBadge').hidden = true;
@@ -1604,6 +2390,7 @@ function showSignup() {
   document.getElementById('fixedPanel-stock').hidden = true;
   document.getElementById('fixedPanel-historique').hidden = true;
   document.getElementById('fixedPanel-clients').hidden = true;
+  document.getElementById('fixedPanel-ventes').hidden = true;
   document.getElementById('fixedPanel-articles').hidden = true;
   document.getElementById('offlineStatus').hidden = true;
   document.getElementById('pendingBadge').hidden = true;
@@ -1660,7 +2447,7 @@ function showApp() {
   document.getElementById('logoutBtn').hidden = false;
   document.getElementById('changePasswordBtn').hidden = false;
   document.querySelector('.app-fixed-top nav.tabs').hidden = false;
-  ['dashboard', 'stock', 'historique', 'clients', 'articles'].forEach(t => {
+  ['dashboard', 'stock', 'historique', 'clients', 'ventes', 'articles'].forEach(t => {
     document.getElementById('fixedPanel-' + t).hidden = (t !== currentTab);
   });
   document.getElementById('fixedTop').hidden = false;
@@ -1768,6 +2555,8 @@ function enterAppWithProfile() {
   loadArticles();
   loadMovements();
   loadCustomers();
+  loadShopInfo();
+  loadSalesDocuments();
   updateOnlineStatus();
   updatePendingBadge();
   syncPendingMovements();
@@ -1813,12 +2602,17 @@ function subscribeRealtime() {
   customersChannel = supa.channel('public:customers')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, loadCustomers)
     .subscribe();
+  salesDocsChannel = supa.channel('public:sales_documents')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'sales_documents' }, loadSalesDocuments)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'invoice_payments' }, loadSalesDocuments)
+    .subscribe();
 }
 
 function unsubscribeRealtime() {
   if (articlesChannel) { supa.removeChannel(articlesChannel); articlesChannel = null; }
   if (movementsChannel) { supa.removeChannel(movementsChannel); movementsChannel = null; }
   if (customersChannel) { supa.removeChannel(customersChannel); customersChannel = null; }
+  if (salesDocsChannel) { supa.removeChannel(salesDocsChannel); salesDocsChannel = null; }
 }
 
 async function start() {
