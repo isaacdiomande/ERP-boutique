@@ -280,7 +280,7 @@ form { display: flex; flex-direction: column; gap: 14px; }
 .doc-line .remove-line { background: none; border: none; color: var(--bad); font-size: 0.8rem; font-weight: 600; cursor: pointer; padding: 2px 4px; }
 .doc-totals { background: var(--surface-sunken); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 4px; font-size: 0.86rem; }
 .doc-totals div { display: flex; justify-content: space-between; }
-.doc-totals span:last-child { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.doc-totals span:last-child { font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; padding-left: 8px; }
 .doc-totals .grand { font-weight: 700; font-size: 1rem; border-top: 1px solid var(--border); padding-top: 6px; margin-top: 2px; }
 .doc-totals .due { color: var(--bad); font-weight: 700; }
 .doc-meta { display: flex; flex-direction: column; gap: 3px; font-size: 0.84rem; color: var(--ink-dim); }
@@ -349,6 +349,7 @@ form { display: flex; flex-direction: column; gap: 14px; }
     <button class="tab-btn" data-tab="ventes" id="ventesTabBtn">Ventes</button>
     <button class="tab-btn" data-tab="achats" id="achatsTabBtn" hidden>Achats</button>
     <button class="tab-btn" data-tab="livraisons" id="livraisonsTabBtn">Livraisons</button>
+    <button class="tab-btn" data-tab="tresorerie" id="tresoTabBtn" hidden>Trésorerie</button>
     <button class="tab-btn" data-tab="articles" id="articlesTabBtn">Articles</button>
   </nav>
 
@@ -435,6 +436,27 @@ form { display: flex; flex-direction: column; gap: 14px; }
         <option value="annulee">Annulées</option>
         <option value="toutes">Toutes</option>
       </select>
+    </div>
+  </div>
+
+  <div class="fixed-tab-panel" id="fixedPanel-tresorerie" hidden>
+    <div class="tiles" id="tresoTiles"></div>
+    <div id="tresoActions" hidden>
+      <div class="btn-row" style="grid-template-columns: 1fr 1fr 1fr">
+        <button class="btn btn-ghost" id="tresoExpenseBtn">− Dépense</button>
+        <button class="btn btn-ghost" id="tresoIncomeBtn">+ Recette</button>
+        <button class="btn btn-ghost" id="tresoTransferBtn">⇄ Transfert</button>
+      </div>
+      <div class="searchbar">
+        <select id="tresoPeriod" style="max-width:none; flex:1">
+          <option value="today">Aujourd'hui</option>
+          <option value="7">7 derniers jours</option>
+          <option value="30" selected>30 derniers jours</option>
+          <option value="month">Ce mois-ci</option>
+          <option value="all">Depuis le départ</option>
+        </select>
+        <select id="tresoAccountFilter" style="max-width:none; flex:1"><option value="">Tous les comptes</option></select>
+      </div>
     </div>
   </div>
 
@@ -537,6 +559,10 @@ form { display: flex; flex-direction: column; gap: 14px; }
 
   <section id="tab-livraisons" hidden>
     <div class="article-list" id="deliveryList"></div>
+  </section>
+
+  <section id="tab-tresorerie" hidden>
+    <div id="tresoContent"></div>
   </section>
 
   <section id="tab-articles" hidden>
@@ -645,6 +671,8 @@ let purchasingChannel = null;
 let deliveriesMap = {};  // id -> livraison
 let teamMembers = {};    // id -> {display_name, email, role} (pour l'assignation)
 let deliveriesChannel = null;
+let treasuryAccounts = [];  // soldes par compte (RPC treasury_balances)
+let treasuryLedger = [];    // journal de la période affichée
 let currentTab = 'dashboard';
 let currentProfile = null; // {role, display_name, email}
 let articlesChannel = null;
@@ -692,7 +720,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     currentTab = btn.dataset.tab;
-    ['dashboard', 'stock', 'historique', 'clients', 'ventes', 'achats', 'livraisons', 'articles'].forEach(t => {
+    ['dashboard', 'stock', 'historique', 'clients', 'ventes', 'achats', 'livraisons', 'tresorerie', 'articles'].forEach(t => {
       document.getElementById('tab-' + t).hidden = (t !== currentTab);
       document.getElementById('fixedPanel-' + t).hidden = (t !== currentTab);
     });
@@ -826,6 +854,7 @@ function renderAll() {
   renderSalesDocs();
   renderPurchasing();
   renderDeliveries();
+  renderTreasury();
   renderDashboard();
 }
 
@@ -957,12 +986,17 @@ function openCustomerSheet(id) {
       openFormSheet({
         title: 'Paiement sur crédit comptoir',
         intro: `${escapeHtml(existing.name)} — crédit dû : <strong>${fmtFCFA(due)}</strong>`,
-        fields: [{ id: 'amount', type: 'number', label: 'Montant reçu (FCFA)', value: due, min: 1, step: 1, required: true }],
+        fields: [
+          { id: 'amount', type: 'number', label: 'Montant reçu (FCFA)', value: due, min: 1, step: 1, required: true },
+          { id: 'method', type: 'select', label: 'Moyen de paiement', value: 'especes', options: Object.entries(PAY_METHODS).map(([value, label]) => ({ value, label })) },
+          { id: 'reference', label: 'Référence', placeholder: 'N° de transaction (facultatif)' },
+        ],
         submitLabel: 'Enregistrer le paiement',
         onSubmit: async (v) => {
           const amount = Number(v.amount);
           if (!(amount > 0)) throw new Error('Montant invalide.');
-          const { error } = await supa.rpc('record_customer_payment', { p_customer_id: id, p_amount: amount });
+          if (amount > due) throw new Error(`Le montant dépasse le crédit dû (${fmtFCFA(due)}).`);
+          const { error } = await supa.rpc('record_customer_payment', { p_customer_id: id, p_amount: amount, p_method: v.method, p_reference: v.reference || null });
           if (error) throw error;
           await loadCustomers();
           toast('Paiement enregistré.');
@@ -2601,6 +2635,314 @@ function printDelivery(id) {
 document.getElementById('newDeliveryBtn')?.addEventListener('click', () => openDeliveryEditor(null, null));
 
 // ---------------------------------------------------------------------------
+// Trésorerie (module 8)
+// Les soldes et le journal sont calculés côté serveur (vue treasury_ledger,
+// fonction treasury_balances) à partir des flux déjà enregistrés par l'app,
+// à partir de la date de départ choisie par la boutique.
+// ---------------------------------------------------------------------------
+const ACCOUNT_KINDS = {
+  caisse: 'Caisse (espèces)', orange_money: 'Orange Money', wave: 'Wave', mtn_money: 'MTN MoMo',
+  moov_money: 'Moov Money', banque: 'Banque', autre: 'Autre',
+};
+const DEFAULT_ACCOUNT_NAMES = { caisse: 'Caisse', orange_money: 'Orange Money', wave: 'Wave', mtn_money: 'MTN MoMo', moov_money: 'Moov Money', banque: 'Banque' };
+const EXPENSE_CATEGORIES = ['Loyer', 'Électricité / eau', 'Internet / téléphone', 'Salaires', 'Transport', 'Achats divers (hors stock)',
+  'Impôts / taxes', 'Frais bancaires / mobile money', 'Retrait personnel', 'Autre dépense'];
+const INCOME_CATEGORIES = ['Apport personnel', 'Autre recette'];
+const LEDGER_SOURCE = {
+  vente_comptoir: 'Vente', facture: 'Facture', livraison: 'Livraison', credit_client: 'Crédit client',
+  remboursement: 'Remboursement', fournisseur: 'Fournisseur', manuel: 'Saisie', transfert: 'Transfert',
+};
+
+function treasuryConfigured() { return !!shopInfo?.treasury_start_date; }
+function localIso(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
+function periodStart(period) {
+  const d = new Date(); d.setHours(0, 0, 0, 0);
+  if (period === 'today') return d;
+  if (period === '7') { d.setDate(d.getDate() - 6); return d; }
+  if (period === '30') { d.setDate(d.getDate() - 29); return d; }
+  if (period === 'month') { d.setDate(1); return d; }
+  return null;
+}
+function accountName(id) { return treasuryAccounts.find(a => a.account_id === id)?.name || 'Compte non affecté'; }
+
+async function loadTreasury() {
+  if (!canManageInvoices()) { treasuryAccounts = []; treasuryLedger = []; return; }
+  if (!treasuryConfigured()) { treasuryAccounts = []; treasuryLedger = []; renderTreasury(); renderDashboard(); return; }
+  const since = periodStart(document.getElementById('tresoPeriod')?.value || '30');
+  let ledgerQuery = supa.from('treasury_ledger').select('*').order('occurred_at', { ascending: false }).limit(2000);
+  if (since) ledgerQuery = ledgerQuery.gte('occurred_at', since.toISOString());
+  const [bal, led] = await Promise.all([supa.rpc('treasury_balances'), ledgerQuery]);
+  if (bal.error) { console.error(bal.error); return; }
+  if (led.error) console.error(led.error);
+  treasuryAccounts = bal.data || [];
+  treasuryLedger = led.data || [];
+  renderTreasury();
+  renderDashboard();
+}
+
+function treasuryForecast() {
+  const today = localIso(new Date());
+  const in30 = localIso(new Date(Date.now() + 30 * 86400000));
+  const invoices = Object.values(salesDocs).filter(d => d.doc_type === 'facture' && d.status === 'emise' && invoiceRemaining(d) > 0);
+  const invoicesDue = invoices.reduce((s, d) => s + invoiceRemaining(d), 0);
+  const credit = Object.values(customers).reduce((s, c) => s + (Number(c.credit_balance) || 0), 0);
+  const deliveriesDue = Object.values(deliveriesMap)
+    .filter(d => (d.status === 'a_livrer' || d.status === 'en_cours') && !d.source_document_id)
+    .reduce((s, d) => s + (Number(d.amount_to_collect) || 0), 0);
+  const deliveryFees = Object.values(deliveriesMap)
+    .filter(d => (d.status === 'a_livrer' || d.status === 'en_cours') && d.source_document_id)
+    .reduce((s, d) => s + (Number(d.delivery_fee) || 0), 0);
+  const pos = Object.values(purchaseOrders).filter(po => poToPay(po) > 0);
+  const supplierLate = pos.filter(po => po.due_date && po.due_date < today).reduce((s, po) => s + poToPay(po), 0);
+  const supplier30 = pos.filter(po => !po.due_date || po.due_date <= in30).reduce((s, po) => s + poToPay(po), 0);
+  const supplierAll = pos.reduce((s, po) => s + poToPay(po), 0);
+  const current = treasuryAccounts.filter(a => a.active).reduce((s, a) => s + Number(a.balance || 0), 0);
+  return {
+    current, invoicesDue, invoicesCount: invoices.length, credit, deliveriesDue: deliveriesDue + deliveryFees,
+    supplierLate, supplier30, supplierAll,
+    projected: current + invoicesDue + credit + deliveriesDue + deliveryFees - supplier30,
+  };
+}
+
+function renderTreasury() {
+  const host = document.getElementById('tresoContent');
+  if (!host) return;
+  const actions = document.getElementById('tresoActions');
+  const tiles = document.getElementById('tresoTiles');
+  if (!treasuryConfigured()) {
+    actions.hidden = true;
+    tiles.innerHTML = '';
+    host.innerHTML = `
+      <div class="doc-totals" style="gap:10px; margin-top:8px">
+        <div style="display:block"><strong style="font-size:1rem">Configurer la trésorerie</strong></div>
+        <div class="current-stock-hint" style="display:block; line-height:1.5">
+          La trésorerie regroupe automatiquement, compte par compte, tout l'argent enregistré dans l'app :
+          ventes, paiements de factures, encaissements à la livraison, paiements de crédit client,
+          remboursements et paiements fournisseurs — plus vos dépenses (loyer, salaires…) et transferts.<br><br>
+          Pour démarrer, choisissez une <strong>date de départ</strong> (en général aujourd'hui) et indiquez ce que vous avez
+          réellement sur chaque compte à cette date : espèces en caisse, solde Orange Money, Wave, banque…
+          Seuls les mouvements à partir de cette date sont comptés.
+        </div>
+        <button type="button" class="btn btn-primary btn-block" id="tresoSetupBtn">Configurer maintenant</button>
+      </div>`;
+    document.getElementById('tresoSetupBtn').addEventListener('click', openTreasurySetup);
+    return;
+  }
+  actions.hidden = false;
+
+  // Filtre compte
+  const accSel = document.getElementById('tresoAccountFilter');
+  const prevAcc = accSel.value;
+  accSel.innerHTML = '<option value="">Tous les comptes</option>' +
+    treasuryAccounts.map(a => `<option value="${a.account_id}">${escapeHtml(a.name)}</option>`).join('');
+  accSel.value = treasuryAccounts.some(a => a.account_id === prevAcc) ? prevAcc : '';
+
+  const todayRows = treasuryLedger.filter(l => localIso(new Date(l.occurred_at)) === localIso(new Date()) && l.source !== 'transfert');
+  const inToday = todayRows.filter(l => l.amount > 0).reduce((s, l) => s + Number(l.amount), 0);
+  const outToday = todayRows.filter(l => l.amount < 0).reduce((s, l) => s - Number(l.amount), 0);
+  const f = treasuryForecast();
+  tiles.innerHTML = `
+    <div class="tile"><div class="label">Trésorerie totale</div><div class="value small">${fmtFCFA(f.current)}</div></div>
+    <div class="tile"><div class="label">Entrées aujourd'hui</div><div class="value small" style="color:var(--good)">${fmtFCFA(inToday)}</div></div>
+    <div class="tile"><div class="label">Sorties aujourd'hui</div><div class="value small" style="color:var(--bad)">${fmtFCFA(outToday)}</div></div>`;
+
+  const period = document.getElementById('tresoPeriod').value;
+  let rows = treasuryLedger;
+  if (accSel.value) rows = rows.filter(l => l.account_id === accSel.value);
+  const periodIn = rows.filter(l => l.amount > 0 && l.source !== 'transfert').reduce((s, l) => s + Number(l.amount), 0);
+  const periodOut = rows.filter(l => l.amount < 0 && l.source !== 'transfert').reduce((s, l) => s - Number(l.amount), 0);
+  const canDelete = currentProfile && ['owner', 'gerant'].includes(currentProfile.role);
+
+  host.innerHTML = `
+    <h3 style="margin-top:4px">Comptes</h3>
+    <div class="tiles" style="grid-template-columns: repeat(auto-fill, minmax(140px, 1fr))">
+      ${treasuryAccounts.filter(a => a.active).map(a => `
+        <div class="tile" data-account="${a.account_id}" style="cursor:pointer">
+          <div class="label">${escapeHtml(a.name)}</div>
+          <div class="value small" style="${Number(a.balance) < 0 ? 'color:var(--bad)' : ''}">${fmtFCFA(a.balance)}</div>
+        </div>`).join('')}
+    </div>
+    <div class="btn-row" style="margin-top:8px">
+      <button type="button" class="btn btn-ghost" id="tresoAddAccountBtn">+ Ajouter un compte</button>
+      <button type="button" class="btn btn-ghost" id="tresoSettingsBtn">⚙ Départ (${fmtDate(shopInfo.treasury_start_date)})</button>
+    </div>
+
+    <h3>Prévisionnel à 30 jours</h3>
+    <div class="doc-totals">
+      <div><span>Trésorerie actuelle</span><span>${fmtFCFA(f.current)}</span></div>
+      <div><span>+ Factures impayées (${f.invoicesCount})</span><span>${fmtFCFA(f.invoicesDue)}</span></div>
+      <div><span>+ Crédit comptoir des clients</span><span>${fmtFCFA(f.credit)}</span></div>
+      <div><span>+ Livraisons à encaisser</span><span>${fmtFCFA(f.deliveriesDue)}</span></div>
+      <div><span>− Fournisseurs à payer sous 30 j${f.supplierLate > 0 ? ` (dont ${fmtFCFA(f.supplierLate)} en retard)` : ''}</span><span>${fmtFCFA(f.supplier30)}</span></div>
+      <div class="grand"><span>Trésorerie prévisionnelle</span><span style="${f.projected < 0 ? 'color:var(--bad)' : ''}">${fmtFCFA(f.projected)}</span></div>
+      ${f.supplierAll > f.supplier30 ? `<div class="current-stock-hint" style="display:block">Autres engagements fournisseurs au-delà de 30 jours : ${fmtFCFA(f.supplierAll - f.supplier30)}.</div>` : ''}
+    </div>
+
+    <h3>Journal</h3>
+    <div class="doc-totals" style="margin-bottom:8px">
+      <div><span>Entrées sur la période</span><span style="color:var(--good)">${fmtFCFA(periodIn)}</span></div>
+      <div><span>Sorties sur la période</span><span style="color:var(--bad)">${fmtFCFA(periodOut)}</span></div>
+    </div>
+    <div class="history-list">
+      ${rows.length === 0 ? '<div class="empty-state">Aucun mouvement sur cette période.</div>' : rows.map(l => {
+        const manual = l.source === 'manuel' || l.source === 'transfert';
+        const pos = Number(l.amount) >= 0;
+        return `<div class="history-row" ${manual && canDelete ? `data-entry="${l.source_id}" style="cursor:pointer"` : ''}>
+          <div class="kind ${pos ? 'vente' : 'perte'}">${pos ? '+' : '−'}</div>
+          <div class="info">
+            <div class="line1">${escapeHtml(l.label || '')}</div>
+            <div class="line2">${new Date(l.occurred_at).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })} · ${escapeHtml(accountName(l.account_id))} · ${LEDGER_SOURCE[l.source] || l.source}</div>
+          </div>
+          <div class="amount ${pos ? 'pos' : 'neg'}">${pos ? '+' : '−'}${fmtFCFA(Math.abs(Number(l.amount)))}</div>
+        </div>`;
+      }).join('')}
+    </div>
+    ${rows.length >= 2000 ? '<div class="current-stock-hint">Affichage limité aux 2 000 derniers mouvements : réduisez la période.</div>' : ''}`;
+
+  host.querySelectorAll('[data-account]').forEach(el => el.addEventListener('click', () => openTreasuryAccountSheet(el.dataset.account)));
+  document.getElementById('tresoAddAccountBtn').addEventListener('click', () => openTreasuryAccountSheet(null));
+  document.getElementById('tresoSettingsBtn').addEventListener('click', openTreasurySetup);
+  host.querySelectorAll('[data-entry]').forEach(el => el.addEventListener('click', () => {
+    const l = treasuryLedger.find(x => x.source_id === el.dataset.entry);
+    openFormSheet({
+      title: l.source === 'transfert' ? 'Supprimer le transfert' : 'Supprimer l\'écriture',
+      intro: `${escapeHtml(l.label)} — ${fmtFCFA(Math.abs(Number(l.amount)))}${l.source === 'transfert' ? '<br>Les deux côtés du transfert seront supprimés.' : ''}`,
+      fields: [],
+      submitLabel: 'Supprimer',
+      onSubmit: async () => {
+        const { error } = await supa.rpc('delete_treasury_entry', { p_id: l.source_id });
+        if (error) throw error;
+        await loadTreasury();
+        toast('Écriture supprimée.');
+      },
+    });
+  }));
+}
+document.getElementById('tresoPeriod')?.addEventListener('change', loadTreasury);
+document.getElementById('tresoAccountFilter')?.addEventListener('change', renderTreasury);
+document.getElementById('tresoTabBtn')?.addEventListener('click', () => { loadShopInfo().then(loadTreasury); });
+
+function openTreasurySetup() {
+  const configured = treasuryConfigured();
+  const byKind = {};
+  treasuryAccounts.filter(a => a.is_default).forEach(a => { byKind[a.kind] = a; });
+  openFormSheet({
+    title: configured ? 'Date de départ et soldes' : 'Configurer la trésorerie',
+    intro: configured
+      ? 'Changer la date de départ ou un solde de départ recalcule tous les soldes. Les écritures ne sont pas modifiées.'
+      : 'Indiquez ce que vous avez <strong>réellement</strong> sur chaque compte à la date de départ. Laissez 0 pour un compte que vous n\'utilisez pas.',
+    fields: [
+      { id: 'start', type: 'date', label: 'Date de départ', value: shopInfo?.treasury_start_date || localIso(new Date()) },
+      ...Object.entries(DEFAULT_ACCOUNT_NAMES).map(([kind, name]) => ({
+        id: 'bal_' + kind, type: 'number', step: 1, label: `${ACCOUNT_KINDS[kind]} — solde à cette date (FCFA)`,
+        value: byKind[kind] ? Number(byKind[kind].opening_balance) : 0,
+      })),
+    ],
+    submitLabel: configured ? 'Enregistrer' : 'Démarrer la trésorerie',
+    onSubmit: async (v) => {
+      if (!v.start) throw new Error('La date de départ est obligatoire.');
+      const accounts = Object.entries(DEFAULT_ACCOUNT_NAMES).map(([kind, name]) => ({
+        kind, name: byKind[kind]?.name || name, opening_balance: Number(v['bal_' + kind]) || 0,
+      }));
+      const { error } = await supa.rpc('setup_treasury', { p_start_date: v.start, p_accounts: accounts });
+      if (error) throw error;
+      await loadShopInfo();
+      await loadTreasury();
+      toast(configured ? 'Trésorerie mise à jour.' : 'Trésorerie démarrée.');
+    },
+  });
+}
+
+function openTreasuryAccountSheet(id) {
+  const a = id ? treasuryAccounts.find(x => x.account_id === id) : null;
+  openFormSheet({
+    title: a ? a.name : 'Nouveau compte',
+    intro: a ? `Solde actuel : <strong>${fmtFCFA(a.balance)}</strong> (départ ${fmtFCFA(a.opening_balance)} + mouvements ${fmtFCFA(a.flows)})${a.is_default ? `<br>Compte principal pour les paiements « ${ACCOUNT_KINDS[a.kind]} ».` : ''}` : 'Ex : un deuxième compte bancaire, une caisse secondaire.',
+    fields: [
+      { id: 'name', label: 'Nom', value: a?.name || '', required: true },
+      ...(a ? [] : [{ id: 'kind', type: 'select', label: 'Type', value: 'banque', options: Object.entries(ACCOUNT_KINDS).map(([value, label]) => ({ value, label })) }]),
+      { id: 'opening', type: 'number', step: 1, label: 'Solde à la date de départ (FCFA)', value: a ? Number(a.opening_balance) : 0 },
+      ...(a && !a.is_default ? [{ id: 'active', type: 'checkbox', label: 'Compte actif', value: a.active }] : []),
+    ],
+    submitLabel: a ? 'Enregistrer' : 'Ajouter le compte',
+    onSubmit: async (v) => {
+      const { error } = await supa.rpc('save_treasury_account', {
+        p_id: a ? a.account_id : null, p_name: v.name, p_kind: a ? a.kind : v.kind,
+        p_opening_balance: Number(v.opening) || 0, p_active: v.active === undefined ? true : v.active,
+      });
+      if (error) throw error;
+      await loadTreasury();
+      toast('Compte enregistré.');
+    },
+  });
+}
+
+function activeAccountOptions() {
+  return treasuryAccounts.filter(a => a.active).map(a => ({ value: a.account_id, label: `${a.name} (${fmtFCFA(a.balance)})` }));
+}
+function openTreasuryEntrySheet(direction) {
+  const expense = direction === 'out';
+  const cats = expense ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
+  const caisse = treasuryAccounts.find(a => a.kind === 'caisse' && a.is_default);
+  openFormSheet({
+    title: expense ? 'Nouvelle dépense' : 'Nouvelle recette',
+    intro: expense ? 'Dépenses hors marchandises (les achats de stock passent par l\'onglet Achats).' : 'Entrée d\'argent qui ne vient pas d\'une vente (ex. apport personnel).',
+    fields: [
+      { id: 'account', type: 'select', label: expense ? 'Payé depuis' : 'Reçu sur', value: caisse?.account_id || '', options: activeAccountOptions() },
+      { id: 'amount', type: 'number', label: 'Montant (FCFA)', min: 1, step: 1, required: true },
+      { id: 'category', type: 'select', label: 'Catégorie', value: cats[0], options: cats.map(c => ({ value: c, label: c })) },
+      { id: 'label', label: 'Libellé', placeholder: expense ? 'Ex : loyer de novembre' : 'Facultatif' },
+      { id: 'date', type: 'date', label: 'Date', value: localIso(new Date()) },
+      { id: 'reference', label: 'Référence', placeholder: 'N° de reçu, de transaction… (facultatif)' },
+    ],
+    submitLabel: 'Enregistrer',
+    onSubmit: async (v) => {
+      const amount = Number(v.amount);
+      if (!(amount > 0)) throw new Error('Montant invalide.');
+      const { error } = await supa.rpc('add_treasury_entry', {
+        p_account_id: v.account, p_amount: expense ? -amount : amount, p_category: v.category,
+        p_label: v.label || null, p_reference: v.reference || null, p_date: v.date || null,
+      });
+      if (error) throw error;
+      markActivity();
+      await loadTreasury();
+      toast(expense ? 'Dépense enregistrée.' : 'Recette enregistrée.');
+    },
+  });
+}
+function openTreasuryTransferSheet() {
+  const opts = activeAccountOptions();
+  if (opts.length < 2) { toast('Il faut au moins deux comptes actifs.'); return; }
+  const caisse = treasuryAccounts.find(a => a.kind === 'caisse' && a.is_default);
+  const banque = treasuryAccounts.find(a => a.kind === 'banque' && a.is_default);
+  openFormSheet({
+    title: 'Transfert entre comptes',
+    intro: 'Ex : dépôt des espèces à la banque, retrait Orange Money vers la caisse. Le total de la trésorerie ne change pas.',
+    fields: [
+      { id: 'from', type: 'select', label: 'Depuis', value: caisse?.account_id || opts[0].value, options: opts },
+      { id: 'to', type: 'select', label: 'Vers', value: banque?.account_id || opts[1].value, options: opts },
+      { id: 'amount', type: 'number', label: 'Montant (FCFA)', min: 1, step: 1, required: true },
+      { id: 'label', label: 'Libellé', placeholder: 'Facultatif' },
+      { id: 'date', type: 'date', label: 'Date', value: localIso(new Date()) },
+    ],
+    submitLabel: 'Enregistrer le transfert',
+    onSubmit: async (v) => {
+      if (v.from === v.to) throw new Error('Choisissez deux comptes différents.');
+      const amount = Number(v.amount);
+      if (!(amount > 0)) throw new Error('Montant invalide.');
+      const { error } = await supa.rpc('add_treasury_transfer', { p_from: v.from, p_to: v.to, p_amount: amount, p_label: v.label || null, p_date: v.date || null });
+      if (error) throw error;
+      markActivity();
+      await loadTreasury();
+      toast('Transfert enregistré.');
+    },
+  });
+}
+document.getElementById('tresoExpenseBtn')?.addEventListener('click', () => openTreasuryEntrySheet('out'));
+document.getElementById('tresoIncomeBtn')?.addEventListener('click', () => openTreasuryEntrySheet('in'));
+document.getElementById('tresoTransferBtn')?.addEventListener('click', openTreasuryTransferSheet);
+
+// ---------------------------------------------------------------------------
 // Retours & remboursements (module 5)
 // ---------------------------------------------------------------------------
 const RETURN_REASONS = {
@@ -3032,6 +3374,7 @@ function renderDashboard() {
     ${gerant ? `<div class="tile"><div class="label">Marge 7 jours</div><div class="value small">${fmtFCFA(margin7d)}</div></div>` : ''}
     ${gerant && unpaidInvoices.count > 0 ? `<div class="tile"><div class="label">Factures impayées (${unpaidInvoices.count})</div><div class="value small">${fmtFCFA(unpaidInvoices.total)}</div></div>` : ''}
     ${gerant && supplierDebt > 0 ? `<div class="tile"><div class="label">Dettes fournisseurs</div><div class="value small">${fmtFCFA(supplierDebt)}</div></div>` : ''}
+    ${gerant && treasuryAccounts.length > 0 ? `<div class="tile"><div class="label">Trésorerie</div><div class="value small">${fmtFCFA(treasuryAccounts.filter(a => a.active).reduce((s, a) => s + Number(a.balance || 0), 0))}</div></div>` : ''}
   `;
 
   document.getElementById('dashboardAlert').innerHTML = alertCount > 0
@@ -3072,6 +3415,7 @@ function applyRoleToUI() {
   document.getElementById('shopSettingsBtn').hidden = !gerant;
   document.getElementById('achatsTabBtn').hidden = !canManageInvoices();
   document.getElementById('teamBtn').hidden = currentProfile.role !== 'owner';
+  document.getElementById('tresoTabBtn').hidden = !canManageInvoices();
   const livreur = currentProfile.role === 'livreur';
   // Le livreur n'a que l'onglet Livraisons (ses livraisons)
   document.querySelectorAll('.tab-btn').forEach(b => {
@@ -3138,6 +3482,10 @@ function openMoveSheet(preselectId) {
           <input type="checkbox" id="moveOnCredit" style="width:auto">
           <span>Vente à crédit (ajoutée au solde dû du client)</span>
         </label>
+        <div class="field" id="moveMethodField">
+          <label for="moveMethod">Payé en</label>
+          <select id="moveMethod">${Object.entries(PAY_METHODS).filter(([v]) => v !== 'cheque').map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>
+        </div>
         <button type="submit" class="btn btn-primary btn-block" id="moveSubmitBtn">Enregistrer la vente</button>
       </form>
     </div>
@@ -3153,14 +3501,18 @@ function openMoveSheet(preselectId) {
   const creditField = document.getElementById('moveCreditField');
   const customerSelect = document.getElementById('moveCustomer');
   const creditCheckbox = document.getElementById('moveOnCredit');
+  const methodField = document.getElementById('moveMethodField');
+  const methodSelect = document.getElementById('moveMethod');
   const verbByType = { vente: 'Enregistrer la vente', reassort: "Enregistrer l'entrée", perte: 'Enregistrer la perte' };
   function updateCustomerFieldsVisibility() {
     const show = activeType === 'vente' && Object.keys(customers).length > 0;
     customerField.hidden = !show;
     creditField.hidden = !show || !customerSelect.value;
     if (!show || !customerSelect.value) creditCheckbox.checked = false;
+    methodField.hidden = activeType !== 'vente' || creditCheckbox.checked;
   }
   customerSelect.addEventListener('change', updateCustomerFieldsVisibility);
+  creditCheckbox.addEventListener('change', updateCustomerFieldsVisibility);
   typeBtns.forEach(btn => {
     btn.addEventListener('click', () => {
       typeBtns.forEach(b => b.classList.remove('active'));
@@ -3203,6 +3555,8 @@ function openMoveSheet(preselectId) {
     }
     const customerId = (activeType === 'vente' && customerSelect.value) ? customerSelect.value : null;
     const onCredit = activeType === 'vente' && customerId && creditCheckbox.checked;
+    // Moyen de paiement d'une vente comptant (pour la trésorerie)
+    const saleMethod = activeType === 'vente' && !onCredit ? methodSelect.value : null;
     submitBtn.disabled = true;
     try {
       // Réassort : toujours en ligne (réservé au gérant, moins urgent à enregistrer immédiatement).
@@ -3210,10 +3564,10 @@ function openMoveSheet(preselectId) {
       // pas d'estimation optimiste hors-ligne pour l'argent dû.
       // Vente au comptant / Perte : tolère l'absence de réseau, mise en file d'attente locale.
       if (activeType === 'reassort' || onCredit) {
-        await recordMovement(articleId, activeType, qty, customerId, !!onCredit);
+        await recordMovement(articleId, activeType, qty, customerId, !!onCredit, saleMethod);
         toast('Mouvement enregistré.');
       } else {
-        const wentOffline = await recordMovementTolerant(articleId, activeType, qty, customerId);
+        const wentOffline = await recordMovementTolerant(articleId, activeType, qty, customerId, saleMethod);
         toast(wentOffline ? 'Hors-ligne : vente enregistrée, en attente de synchronisation.' : 'Mouvement enregistré.');
       }
       backdrop.remove();
@@ -3481,7 +3835,7 @@ document.getElementById('historyFilter').addEventListener('change', renderHistor
 // ---------------------------------------------------------------------------
 // Data layer: Supabase
 // ---------------------------------------------------------------------------
-async function recordMovement(articleId, type, qty, customerId = null, onCredit = false) {
+async function recordMovement(articleId, type, qty, customerId = null, onCredit = false, method = null) {
   // Passe par la fonction sécurisée côté serveur : elle revérifie le rôle,
   // met à jour le stock et insère le mouvement de façon atomique. Pour une
   // vente à crédit, elle incrémente aussi le solde dû du client (module 3).
@@ -3491,6 +3845,7 @@ async function recordMovement(articleId, type, qty, customerId = null, onCredit 
     p_qty: qty,
     p_customer_id: customerId,
     p_on_credit: onCredit,
+    p_method: method,
   });
   if (error) throw error;
   markActivity();
@@ -3503,17 +3858,17 @@ async function recordMovement(articleId, type, qty, customerId = null, onCredit 
 // échoue pour une raison réseau), le mouvement est mis en file d'attente locale
 // et appliqué à l'affichage de façon optimiste (le stock réel sera recalé dès
 // la synchronisation). Retourne true si le mouvement est parti en hors-ligne.
-async function recordMovementTolerant(articleId, type, qty, customerId = null) {
+async function recordMovementTolerant(articleId, type, qty, customerId = null, method = null) {
   if (navigator.onLine) {
     try {
-      await recordMovement(articleId, type, qty, customerId, false);
+      await recordMovement(articleId, type, qty, customerId, false, method);
       return false;
     } catch (err) {
       // Si l'erreur ne ressemble pas à un problème réseau (ex: refusé par le serveur), on la relance.
       if (!isLikelyNetworkError(err)) throw err;
     }
   }
-  await queueOfflineMovement(articleId, type, qty, customerId);
+  await queueOfflineMovement(articleId, type, qty, customerId, method);
   return true;
 }
 
@@ -3522,7 +3877,7 @@ function isLikelyNetworkError(err) {
   return !navigator.onLine || msg.includes('fetch') || msg.includes('network') || msg.includes('failed to fetch');
 }
 
-async function queueOfflineMovement(articleId, type, qty, customerId = null) {
+async function queueOfflineMovement(articleId, type, qty, customerId = null, method = null) {
   markActivity();
   const entry = {
     localId: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -3530,6 +3885,7 @@ async function queueOfflineMovement(articleId, type, qty, customerId = null) {
     type,
     qty,
     customer_id: customerId,
+    payment_method: method,
     by_name: currentProfile?.display_name || currentProfile?.email || 'inconnu',
     created_at: new Date().toISOString(),
   };
@@ -3564,7 +3920,7 @@ async function syncPendingMovements() {
     pending.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
     for (const entry of pending) {
       try {
-        await recordMovement(entry.article_id, entry.type, entry.qty, entry.customer_id ?? null, false);
+        await recordMovement(entry.article_id, entry.type, entry.qty, entry.customer_id ?? null, false, entry.payment_method ?? null);
         await removePendingMovement(entry.localId);
       } catch (err) {
         console.error('Échec synchronisation mouvement en attente:', err);
@@ -3797,6 +4153,7 @@ function showLogin() {
   document.getElementById('fixedPanel-ventes').hidden = true;
   document.getElementById('fixedPanel-achats').hidden = true;
   document.getElementById('fixedPanel-livraisons').hidden = true;
+  document.getElementById('fixedPanel-tresorerie').hidden = true;
   document.getElementById('fixedPanel-articles').hidden = true;
   document.getElementById('offlineStatus').hidden = true;
   document.getElementById('pendingBadge').hidden = true;
@@ -3822,6 +4179,7 @@ function showSignup() {
   document.getElementById('fixedPanel-ventes').hidden = true;
   document.getElementById('fixedPanel-achats').hidden = true;
   document.getElementById('fixedPanel-livraisons').hidden = true;
+  document.getElementById('fixedPanel-tresorerie').hidden = true;
   document.getElementById('fixedPanel-articles').hidden = true;
   document.getElementById('offlineStatus').hidden = true;
   document.getElementById('pendingBadge').hidden = true;
@@ -4131,7 +4489,7 @@ function showApp() {
   document.getElementById('logoutBtn').hidden = false;
   document.getElementById('changePasswordBtn').hidden = false;
   document.querySelector('.app-fixed-top nav.tabs').hidden = false;
-  ['dashboard', 'stock', 'historique', 'clients', 'ventes', 'achats', 'livraisons', 'articles'].forEach(t => {
+  ['dashboard', 'stock', 'historique', 'clients', 'ventes', 'achats', 'livraisons', 'tresorerie', 'articles'].forEach(t => {
     document.getElementById('fixedPanel-' + t).hidden = (t !== currentTab);
   });
   document.getElementById('fixedTop').hidden = false;
@@ -4265,11 +4623,11 @@ function enterAppWithProfile() {
   loadArticles();
   loadMovements();
   loadCustomers();
-  loadShopInfo();
   loadSalesDocuments();
   loadReturns();
   loadPurchasing();
   loadDeliveries();
+  loadShopInfo().then(loadTreasury);
   updateOnlineStatus();
   updatePendingBadge();
   syncPendingMovements();
@@ -4308,6 +4666,8 @@ document.getElementById('logoutBtn').addEventListener('click', async () => {
   purchaseOrders = {};
   deliveriesMap = {};
   teamMembers = {};
+  treasuryAccounts = [];
+  treasuryLedger = [];
   shopInfo = null;
   showLogin();
 });
