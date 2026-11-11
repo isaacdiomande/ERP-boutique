@@ -323,6 +323,11 @@ form { display: flex; flex-direction: column; gap: 14px; }
 .report-table tfoot td { font-weight: 700; border-top: 1px solid var(--border); border-bottom: none; }
 .report-table .n { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .report-table td.neg { color: var(--bad); }
+.audit-day { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--ink-dim); margin: 12px 0 4px; }
+.audit-row { display: flex; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 0.84rem; }
+.audit-time { flex: none; width: 42px; font-family: var(--font-mono); font-size: 0.78rem; color: var(--ink-dim); padding-top: 1px; }
+.audit-body { flex: 1; min-width: 0; }
+.audit-detail { font-size: 0.78rem; color: var(--ink-dim); margin-top: 2px; overflow-wrap: anywhere; }
 .pdoc + .pdoc { break-before: page; page-break-before: always; }
 .pdoc { color: #111; background: #fff; font-family: var(--font-body); font-size: 10.5pt; line-height: 1.4; }
 .pdoc .phead { display: flex; justify-content: space-between; gap: 24px; border-bottom: 2px solid #3c7a52; padding-bottom: 10px; margin-bottom: 14px; }
@@ -353,6 +358,7 @@ form { display: flex; flex-direction: column; gap: 14px; }
       <span class="dot off" id="whoDot"></span>
       <span id="whoLabel">Connexion…</span>
       <button class="logout-link-top" id="teamBtn" hidden>Équipe</button>
+      <button class="logout-link-top" id="securityBtn" hidden>Sécurité</button>
       <button class="logout-link-top" id="changePasswordBtn" hidden>Mot de passe</button>
       <button class="logout-link-top" id="logoutBtn" hidden>Se déconnecter</button>
     </div>
@@ -3721,6 +3727,177 @@ document.getElementById('exportInvoicesBtn')?.addEventListener('click', openBatc
 document.getElementById('exportStatementBtn')?.addEventListener('click', () => openCustomerStatement(null));
 
 // ---------------------------------------------------------------------------
+// Sécurité & sauvegardes (module 11)
+// Journal d'activité (owner / gérant) et sauvegarde complète (owner).
+// ---------------------------------------------------------------------------
+const AUDIT_ENTITIES = {
+  articles: 'Article', customers: 'Client', suppliers: 'Fournisseur', sales_documents: 'Devis / facture',
+  invoice_payments: 'Paiement de facture', customer_payments: 'Paiement de crédit', returns: 'Retour',
+  purchase_orders: 'Bon de commande', supplier_payments: 'Paiement fournisseur', deliveries: 'Livraison',
+  treasury_accounts: 'Compte de trésorerie', treasury_entries: 'Écriture de trésorerie', profiles: 'Membre',
+  shop_invitations: 'Invitation', shops: 'Paramètres boutique', session: 'Connexion',
+};
+const AUDIT_FIELDS = {
+  name: 'nom', sell_price: 'prix de vente', buy_price: 'prix d\'achat', threshold: 'seuil d\'alerte', category: 'catégorie',
+  phone: 'téléphone', email: 'email', address: 'adresse', segment: 'segment', credit_limit: 'plafond de crédit', notes: 'notes',
+  status: 'statut', number: 'numéro', issue_date: 'date d\'émission', due_date: 'échéance', total_ttc: 'total TTC',
+  customer_name: 'client', fne_number: 'n° FNE', cancel_reason: 'motif d\'annulation', role: 'rôle', shop_id: 'boutique',
+  display_name: 'nom affiché', assigned_to: 'livreur', scheduled_date: 'date prévue', collected_amount: 'montant encaissé',
+  failure_reason: 'motif d\'échec', amount: 'montant', method: 'moyen', label: 'libellé', opening_balance: 'solde de départ',
+  active: 'actif', treasury_start_date: 'date de départ trésorerie', vat_rate: 'taux de TVA', vat_applicable: 'TVA applicable',
+  legal_name: 'raison sociale', ncc: 'NCC', rccm: 'RCCM', tax_regime: 'régime fiscal', invoice_footer: 'pied de facture',
+  revoked_at: 'annulée le', accepted_at: 'acceptée le', payment_terms_days: 'délai de paiement', contact_name: 'contact',
+  supplier_name: 'fournisseur', expected_date: 'livraison prévue', supplier_ref: 'réf. fournisseur', delivery_fee: 'frais de livraison',
+  amount_to_collect: 'à encaisser', content: 'contenu', commune: 'commune', time_slot: 'créneau', valid_until: 'validité',
+};
+const AUDIT_VERBS = { insert: 'a créé', update: 'a modifié', delete: 'a supprimé', login: 's\'est connecté(e)' };
+let auditRows = [];
+let auditFilter = { user: '', entity: '' };
+
+function auditValue(k, v) {
+  if (v == null || v === '') return '∅';
+  if (k === 'role') return ROLE_LABELS[v] || v;
+  if (k === 'status') return DOC_STATUS_LABELS[v] || PO_STATUS_LABELS[v] || DELIVERY_STATUS_LABELS[v] || v;
+  if (k === 'method') return payLabel(v);
+  if (k === 'assigned_to') return memberName(v) || 'membre';
+  if (k === 'shop_id') return v ? 'boutique' : 'aucune (retiré)';
+  if (typeof v === 'boolean') return v ? 'oui' : 'non';
+  if (typeof v === 'number' && ['sell_price', 'buy_price', 'total_ttc', 'amount', 'credit_limit', 'opening_balance', 'collected_amount', 'delivery_fee', 'amount_to_collect'].includes(k)) return fmtFCFA(v);
+  const s = typeof v === 'object' ? JSON.stringify(v) : String(v);
+  return s.length > 60 ? s.slice(0, 57) + '…' : s;
+}
+function auditDetail(r) {
+  const c = r.changes || {};
+  if (r.action === 'login') return ROLE_LABELS[r.label] || '';
+  if (r.action === 'update') {
+    return Object.entries(c).map(([k, [o, n]]) => `${AUDIT_FIELDS[k] || k} : ${escapeHtml(auditValue(k, o))} → <strong>${escapeHtml(auditValue(k, n))}</strong>`).join('<br>');
+  }
+  const bits = [];
+  if (c.amount != null) bits.push(fmtFCFA(c.amount));
+  if (c.method) bits.push(payLabel(c.method));
+  if (c.reference) bits.push('réf. ' + escapeHtml(c.reference));
+  if (c.total_ttc != null && r.entity !== 'invoice_payments') bits.push(fmtFCFA(c.total_ttc));
+  if (c.sell_price != null) bits.push('prix ' + fmtFCFA(c.sell_price));
+  if (c.role) bits.push(ROLE_LABELS[c.role] || c.role);
+  if (c.category && r.entity === 'treasury_entries') bits.push(escapeHtml(c.category));
+  return bits.join(' · ');
+}
+
+async function loadAudit(append) {
+  let q = supa.from('audit_log').select('*').order('at', { ascending: false });
+  if (auditFilter.user) q = q.eq('user_id', auditFilter.user);
+  if (auditFilter.entity) q = q.eq('entity', auditFilter.entity);
+  const from = append ? auditRows.length : 0;
+  const { data, error } = await q.range(from, from + 99);
+  if (error) { console.error(error); toast('Journal indisponible : ' + error.message); return null; }
+  auditRows = append ? auditRows.concat(data || []) : (data || []);
+  return (data || []).length;
+}
+
+function auditListHtml(lastCount) {
+  if (!auditRows.length) return '<div class="empty-state">Aucune activité enregistrée pour ce filtre.</div>';
+  let day = '';
+  return auditRows.map(r => {
+    const d = new Date(r.at);
+    const dlabel = d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    const head = dlabel !== day ? `<div class="audit-day">${(day = dlabel)}</div>` : '';
+    const ent = AUDIT_ENTITIES[r.entity] || r.entity;
+    const what = r.action === 'login' ? '' : ` : ${ent}${r.label ? ' « ' + escapeHtml(r.label) + ' »' : ''}`;
+    const detail = auditDetail(r);
+    return `${head}<div class="audit-row">
+      <div class="audit-time">${d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</div>
+      <div class="audit-body"><div><strong>${escapeHtml(r.user_name || 'Inconnu')}</strong> ${AUDIT_VERBS[r.action] || r.action}${what}</div>
+        ${detail ? `<div class="audit-detail">${detail}</div>` : ''}</div>
+    </div>`;
+  }).join('') + (lastCount === 100 ? '<button type="button" class="btn btn-ghost btn-block" id="auditMore" style="margin-top:8px">Voir plus ancien</button>' : '');
+}
+
+function backupAgeDays() {
+  if (!shopInfo?.last_backup_at) return null;
+  return Math.floor((Date.now() - new Date(shopInfo.last_backup_at).getTime()) / 86400000);
+}
+function backupStatusHtml() {
+  const age = backupAgeDays();
+  if (age == null) return '<span style="color:var(--bad); font-family:inherit">Aucune sauvegarde téléchargée pour l\'instant.</span>';
+  const when = new Date(shopInfo.last_backup_at).toLocaleString('fr-FR', { dateStyle: 'long', timeStyle: 'short' });
+  return `Dernière sauvegarde : ${when}${age >= 7 ? ` <span style="color:var(--bad); font-family:inherit">(il y a ${age} jours)</span>` : ''}.`;
+}
+
+async function downloadBackup(btn) {
+  btn.disabled = true;
+  const label = btn.textContent;
+  btn.textContent = 'Préparation…';
+  try {
+    const { data, error } = await supa.rpc('export_shop_backup');
+    if (error) throw error;
+    const json = JSON.stringify(data);
+    const blob = new Blob([json], { type: 'application/json' });
+    const a = document.createElement('a');
+    const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
+    a.href = URL.createObjectURL(blob);
+    a.download = `sauvegarde-${(shopInfo?.name || 'boutique').toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${stamp}.json`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    await loadShopInfo();
+    renderDashboard();
+    const n = Object.values(data.tables || {}).reduce((s, t) => s + t.length, 0);
+    toast(`Sauvegarde téléchargée (${n.toLocaleString('fr-FR')} enregistrements, ${(json.length / 1048576).toFixed(1)} Mo).`);
+    const st = document.getElementById('backupStatus');
+    if (st) st.innerHTML = backupStatusHtml();
+  } catch (err) {
+    console.error(err);
+    toast('Sauvegarde impossible : ' + (err.message || 'erreur'));
+  } finally {
+    btn.disabled = false;
+    btn.textContent = label;
+  }
+}
+
+async function openSecuritySheet() {
+  const owner = currentProfile?.role === 'owner';
+  await loadShopInfo();
+  const backdrop = openFormSheet({
+    title: 'Sécurité & sauvegardes',
+    intro: `<div id="securityBody" style="display:block"></div>`,
+    fields: [],
+    submitLabel: 'Fermer',
+    onSubmit: async () => {},
+  });
+  const body = backdrop.querySelector('#securityBody');
+  body.parentElement.className = '';   // pas le style « aide » du formulaire
+  const members = Object.entries(teamMembers);
+  body.innerHTML = `
+    ${owner ? `<div class="doc-totals" style="display:block; margin-bottom:12px">
+      <div style="display:block"><strong>Sauvegarde complète</strong></div>
+      <div style="display:block; margin:6px 0" class="current-stock-hint">Toutes les données de la boutique (articles, ventes, factures, clients, achats, trésorerie…) dans un fichier à conserver hors de l'ordinateur : clé USB, Google Drive, email. Recommandé : une fois par semaine.</div>
+      <div style="display:block; margin-bottom:8px" id="backupStatus">${backupStatusHtml()}</div>
+      <button type="button" class="btn btn-primary btn-block" id="backupBtn">Télécharger une sauvegarde</button>
+    </div>` : ''}
+    <div style="display:block"><strong>Journal d'activité</strong></div>
+    <div class="current-stock-hint" style="display:block; margin:4px 0 8px">Qui a fait quoi et quand. Ce journal ne peut être ni modifié ni effacé.</div>
+    <div class="searchbar" style="margin-bottom:8px">
+      <select id="auditUser" style="max-width:none; flex:1"><option value="">Toute l'équipe</option>
+        ${members.map(([id, m]) => `<option value="${id}" ${auditFilter.user === id ? 'selected' : ''}>${escapeHtml(m.display_name || m.email || 'Membre')}</option>`).join('')}</select>
+      <select id="auditEntity" style="max-width:none; flex:1"><option value="">Toutes les actions</option>
+        ${Object.entries(AUDIT_ENTITIES).map(([k, l]) => `<option value="${k}" ${auditFilter.entity === k ? 'selected' : ''}>${l}</option>`).join('')}</select>
+    </div>
+    <div id="auditList" style="display:block"><div class="empty-state">Chargement…</div></div>`;
+  const listEl = body.querySelector('#auditList');
+  const refresh = async (append) => {
+    const n = await loadAudit(append);
+    if (n == null) { listEl.innerHTML = '<div class="empty-state">Journal indisponible.</div>'; return; }
+    listEl.innerHTML = auditListHtml(n);
+    listEl.querySelector('#auditMore')?.addEventListener('click', () => refresh(true));
+  };
+  body.querySelector('#auditUser').addEventListener('change', e => { auditFilter.user = e.target.value; refresh(false); });
+  body.querySelector('#auditEntity').addEventListener('change', e => { auditFilter.entity = e.target.value; refresh(false); });
+  body.querySelector('#backupBtn')?.addEventListener('click', e => downloadBackup(e.currentTarget));
+  refresh(false);
+}
+
+document.getElementById('securityBtn')?.addEventListener('click', openSecuritySheet);
+
+// ---------------------------------------------------------------------------
 // Retours & remboursements (module 5)
 // ---------------------------------------------------------------------------
 const RETURN_REASONS = {
@@ -4155,9 +4332,14 @@ function renderDashboard() {
     ${gerant && treasuryAccounts.length > 0 ? `<div class="tile"><div class="label">Trésorerie</div><div class="value small">${fmtFCFA(treasuryAccounts.filter(a => a.active).reduce((s, a) => s + Number(a.balance || 0), 0))}</div></div>` : ''}
   `;
 
-  document.getElementById('dashboardAlert').innerHTML = alertCount > 0
+  const backupAge = (currentProfile?.role === 'owner' && shopInfo) ? backupAgeDays() : -1;
+  const backupDue = backupAge === null || backupAge >= 7;
+  document.getElementById('dashboardAlert').innerHTML = (alertCount > 0
     ? `<div class="alert-banner">⚠ ${outStock.length} article(s) épuisé(s), ${lowStock.length} en stock bas</div>`
-    : '';
+    : '') + (backupDue
+    ? `<div class="alert-banner" style="margin-top:6px; cursor:pointer" id="backupReminder">💾 ${backupAge === null ? 'Aucune sauvegarde des données téléchargée' : `Dernière sauvegarde il y a ${backupAge} jours`} — cliquez pour sauvegarder</div>`
+    : '');
+  document.getElementById('backupReminder')?.addEventListener('click', openSecuritySheet);
 
   // Top 5 des articles les plus vendus sur 7 jours (en quantité)
   const soldByArticle = {};
@@ -4193,6 +4375,7 @@ function applyRoleToUI() {
   document.getElementById('shopSettingsBtn').hidden = !gerant;
   document.getElementById('achatsTabBtn').hidden = !canManageInvoices();
   document.getElementById('teamBtn').hidden = currentProfile.role !== 'owner';
+  document.getElementById('securityBtn').hidden = !gerant;
   document.getElementById('tresoTabBtn').hidden = !canManageInvoices();
   document.getElementById('reportsTabBtn').hidden = !canManageInvoices();
   const livreur = currentProfile.role === 'livreur';
@@ -4919,6 +5102,7 @@ function showLogin() {
   document.getElementById('joinScreen').hidden = true;
   document.getElementById('noShopScreen').hidden = true;
   document.getElementById('teamBtn').hidden = true;
+  document.getElementById('securityBtn').hidden = true;
   document.getElementById('app').hidden = true;
   document.getElementById('fabMove').hidden = true;
   document.getElementById('whoLabel').textContent = 'Non connecté';
@@ -4946,6 +5130,7 @@ function showSignup() {
   document.getElementById('joinScreen').hidden = true;
   document.getElementById('noShopScreen').hidden = true;
   document.getElementById('teamBtn').hidden = true;
+  document.getElementById('securityBtn').hidden = true;
   document.getElementById('app').hidden = true;
   document.getElementById('fabMove').hidden = true;
   document.getElementById('whoLabel').textContent = 'Non connecté';
@@ -5409,6 +5594,7 @@ function enterAppWithProfile() {
   loadPurchasing();
   loadDeliveries();
   loadShopInfo().then(loadTreasury);
+  supa.rpc('log_session_start').then(() => {}, () => {});
   updateOnlineStatus();
   updatePendingBadge();
   syncPendingMovements();
