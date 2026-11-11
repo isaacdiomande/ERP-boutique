@@ -323,6 +323,7 @@ form { display: flex; flex-direction: column; gap: 14px; }
 .report-table tfoot td { font-weight: 700; border-top: 1px solid var(--border); border-bottom: none; }
 .report-table .n { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .report-table td.neg { color: var(--bad); }
+.pdoc + .pdoc { break-before: page; page-break-before: always; }
 .pdoc { color: #111; background: #fff; font-family: var(--font-body); font-size: 10.5pt; line-height: 1.4; }
 .pdoc .phead { display: flex; justify-content: space-between; gap: 24px; border-bottom: 2px solid #3c7a52; padding-bottom: 10px; margin-bottom: 14px; }
 .pdoc .pshop h1 { font-size: 15pt; margin: 0 0 3px; color: #3c7a52; }
@@ -475,6 +476,11 @@ form { display: flex; flex-direction: column; gap: 14px; }
       </select>
       <button class="btn btn-ghost" id="reportExcelBtn" type="button">Excel</button>
       <button class="btn btn-ghost" id="reportPrintBtn" type="button">Imprimer</button>
+    </div>
+    <div class="btn-row" style="grid-template-columns: 1fr 1fr 1fr">
+      <button class="btn btn-ghost" id="exportAccountingBtn" type="button">Export comptable</button>
+      <button class="btn btn-ghost" id="exportInvoicesBtn" type="button">Imprimer les factures</button>
+      <button class="btn btn-ghost" id="exportStatementBtn" type="button">Relevé client</button>
     </div>
     <div class="searchbar" id="reportCustom" hidden>
       <input type="date" id="reportFrom" aria-label="Du" style="flex:1">
@@ -3387,6 +3393,332 @@ document.getElementById('reportTo')?.addEventListener('change', loadReport);
 document.getElementById('reportsTabBtn')?.addEventListener('click', () => { loadShopInfo(); loadReport(); });
 document.getElementById('reportExcelBtn')?.addEventListener('click', exportReportExcel);
 document.getElementById('reportPrintBtn')?.addEventListener('click', printReport);
+
+// ---------------------------------------------------------------------------
+// Documents & exports (module 10)
+// Lecture directe des tables (droits RLS de l'utilisateur), par pages de
+// 1 000 lignes (plafond de l'API). Aucune écriture.
+// ---------------------------------------------------------------------------
+async function fetchAllRows(makeQuery) {
+  const out = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await makeQuery().range(from, from + 999);
+    if (error) throw error;
+    out.push(...(data || []));
+    if (!data || data.length < 1000) break;
+    if (from > 200000) break;
+  }
+  return out;
+}
+function dayStartIso(d) { return d + 'T00:00:00Z'; }   // Abidjan = UTC
+function dayEndIso(d) { return addDays(d, 1) + 'T00:00:00Z'; }
+function articleName(id) { return (id && articles[id]?.name) || ''; }
+function memberName(id) { return (id && teamMembers[id]?.display_name) || ''; }
+function payLabel(m) { return REPORT_METHODS[m] || m || ''; }
+const DOC_STATUS_LABELS = {
+  brouillon: 'Brouillon', emise: 'Émise', annulee: 'Annulée',
+  en_attente: 'En attente', accepte: 'Accepté', refuse: 'Refusé', converti: 'Converti en facture',
+};
+const PO_STATUS_LABELS = { brouillon: 'Brouillon', commande: 'Commandé', partiel: 'Reçu en partie', recu: 'Reçu', annule: 'Annulé' };
+const DELIVERY_STATUS_LABELS = { a_livrer: 'À livrer', en_cours: 'En cours', livree: 'Livrée', echec: 'Échec', annulee: 'Annulée' };
+const MOVE_TYPE_LABELS = { vente: 'Vente', reassort: 'Réassort', perte: 'Perte', retour: 'Retour' };
+const n0 = v => Math.round(Number(v) || 0);
+const dt = v => v ? new Date(v).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : '';
+
+function exportPeriodFields() {
+  const r = reportData ? { from: reportData.from, to: reportData.to } : reportRange();
+  return [
+    { id: 'from', type: 'date', label: 'Du', value: r.from },
+    { id: 'to', type: 'date', label: 'Au', value: r.to },
+  ];
+}
+function checkPeriod(v) {
+  if (!v.from || !v.to) throw new Error('Indiquez les deux dates.');
+  if (v.to < v.from) throw new Error('La date de fin doit être après la date de début.');
+}
+
+function openAccountingExport() {
+  if (typeof XLSX === 'undefined') { toast('Export Excel indisponible (bibliothèque non chargée).'); return; }
+  openFormSheet({
+    title: 'Export comptable (Excel)',
+    intro: 'Un seul fichier Excel, une feuille par type de données, pour la période choisie. À transmettre à votre comptable ou à archiver.',
+    fields: [
+      ...exportPeriodFields(),
+      { id: 'ventes', type: 'checkbox', label: 'Ventes : factures, lignes, devis, ventes comptoir, encaissements, retours', value: true },
+      { id: 'achats', type: 'checkbox', label: 'Achats : bons de commande, paiements fournisseurs, fournisseurs', value: true },
+      { id: 'tresorerie', type: 'checkbox', label: 'Trésorerie : journal et soldes', value: treasuryConfigured() },
+      { id: 'stock', type: 'checkbox', label: 'Stock : mouvements de la période et stock actuel', value: true },
+      { id: 'clients', type: 'checkbox', label: 'Clients (avec crédit dû)', value: true },
+      { id: 'livraisons', type: 'checkbox', label: 'Livraisons', value: false },
+    ],
+    submitLabel: 'Télécharger le fichier Excel',
+    onSubmit: async (v) => {
+      checkPeriod(v);
+      const wb = await buildAccountingWorkbook(v);
+      if (!wb.SheetNames.length) throw new Error('Cochez au moins une catégorie.');
+      XLSX.writeFile(wb, `export-${(shopInfo?.name || 'boutique').toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${v.from}-au-${v.to}.xlsx`);
+      toast('Export téléchargé.');
+    },
+  });
+}
+
+async function buildAccountingWorkbook(v) {
+  const wb = XLSX.utils.book_new();
+  const add = (name, rows, empty) => XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows.length ? rows : [{ [empty || 'Information']: 'Aucune donnée sur la période' }]), name.slice(0, 31));
+  const from = v.from, to = v.to, fromTs = dayStartIso(from), toTs = dayEndIso(to);
+  const summary = [['Boutique', shopInfo?.legal_name || shopInfo?.name || ''], ['NCC', shopInfo?.ncc || ''], ['Période', `${fmtDate(from)} au ${fmtDate(to)}`], ['Exporté le', new Date().toLocaleString('fr-FR')], []];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(summary), 'Sommaire');
+
+  if (v.ventes) {
+    const docs = await fetchAllRows(() => supa.from('sales_documents').select('*, sales_document_lines(*)')
+      .gte('issue_date', from).lte('issue_date', to).order('issue_date', { ascending: true }));
+    const invoices = docs.filter(d => d.doc_type === 'facture');
+    const quotes = docs.filter(d => d.doc_type === 'devis');
+    add('Factures', invoices.map(d => ({
+      'N°': d.number, 'Date': d.issue_date, 'Échéance': d.due_date || '', 'Client': d.customer_name || '', 'Téléphone': d.customer_phone || '',
+      'Total HT': n0(d.total_ht), 'TVA': n0(d.total_vat), 'Total TTC': n0(d.total_ttc), 'Payé': n0(d.amount_paid), 'Avoirs': n0(d.credited_amount),
+      'Reste à payer': d.status === 'emise' ? invoiceRemaining(d) : 0, 'Statut': DOC_STATUS_LABELS[d.status] || d.status,
+      'N° FNE': d.fne_number || '', 'Motif d\'annulation': d.cancel_reason || '',
+    })));
+    add('Lignes de factures', invoices.flatMap(d => (d.sales_document_lines || []).sort((a, b) => a.position - b.position).map(l => ({
+      'Facture': d.number, 'Date': d.issue_date, 'Statut': DOC_STATUS_LABELS[d.status] || d.status, 'Désignation': l.description,
+      'Quantité': l.qty, 'Prix unitaire TTC': n0(l.unit_price_ttc), 'Total TTC': n0(l.line_total_ttc),
+    }))));
+    add('Devis', quotes.map(d => ({
+      'N°': d.number, 'Date': d.issue_date, 'Valable jusqu\'au': d.valid_until || '', 'Client': d.customer_name || '',
+      'Total TTC': n0(d.total_ttc), 'Statut': DOC_STATUS_LABELS[d.status] || d.status,
+    })));
+
+    const [moves, invPays, custPays, rets] = await Promise.all([
+      fetchAllRows(() => supa.from('movements').select('*').eq('type', 'vente').is('document_id', null).gte('at', fromTs).lt('at', toTs).order('at', { ascending: true })),
+      fetchAllRows(() => supa.from('invoice_payments').select('*').gte('paid_at', fromTs).lt('paid_at', toTs).order('paid_at', { ascending: true })),
+      fetchAllRows(() => supa.from('customer_payments').select('*').gte('paid_at', fromTs).lt('paid_at', toTs).order('paid_at', { ascending: true })),
+      fetchAllRows(() => supa.from('returns').select('*, return_lines(*)').gte('return_date', from).lte('return_date', to).order('return_date', { ascending: true })),
+    ]);
+    add('Ventes comptoir', moves.map(m => {
+      const a = articles[m.article_id] || {};
+      const price = m.unit_price ?? a.sell_price ?? 0;
+      return {
+        'Date': dt(m.at), 'Article': articleName(m.article_id) || 'Article supprimé', 'Quantité': m.qty, 'Prix unitaire': n0(price),
+        'Montant': n0(m.qty * price), 'Paiement': m.on_credit ? 'Crédit client' : payLabel(m.payment_method || 'inconnu'),
+        'Client': customers[m.customer_id]?.name || '', 'Vendeur': m.by_name || '',
+      };
+    }));
+    const docNumber = Object.fromEntries(Object.values(salesDocs).map(d => [d.id, d.number]));
+    invoices.forEach(d => { docNumber[d.id] = d.number; });
+    add('Encaissements', [
+      ...invPays.map(p => ({ ts: p.paid_at, origin: 'Facture ' + (docNumber[p.document_id] || ''), p })),
+      ...custPays.map(p => ({ ts: p.paid_at, origin: 'Crédit client ' + (customers[p.customer_id]?.name || ''), p })),
+    ].sort((a, b) => a.ts.localeCompare(b.ts)).map(({ origin, p }) => ({
+      'Date': dt(p.paid_at), 'Origine': origin, 'Montant': n0(p.amount), 'Moyen': payLabel(p.method), 'Référence': p.reference || '',
+    })));
+    add('Retours', rets.map(r => ({
+      'N°': r.number, 'Date': r.return_date, 'Client': r.customer_name || '', 'Facture d\'origine': docNumber[r.source_document_id] || '',
+      'Motif': r.reason_category, 'Précision': r.reason_note || '', 'Valeur TTC': n0(r.total_ttc),
+      'Suite': { aucun: 'Échange', remboursement: 'Remboursement', deduction_facture: 'Déduit de la facture', credit_client: 'Déduit du crédit client' }[r.refund_type] || r.refund_type,
+      'Montant remboursé': n0(r.refund_amount), 'Moyen': payLabel(r.refund_method), 'N° avoir FNE': r.fne_number || '',
+      'Articles': (r.return_lines || []).map(l => `${l.description} × ${l.qty}`).join(' ; '),
+    })));
+    summary.push(['Ventes'], ['Factures émises (TTC)', n0(invoices.filter(d => d.status === 'emise').reduce((s, d) => s + Number(d.total_ttc), 0))],
+      ['Ventes comptoir', n0(moves.reduce((s, m) => s + m.qty * (m.unit_price ?? articles[m.article_id]?.sell_price ?? 0), 0))],
+      ['Encaissements (factures + crédit client)', n0([...invPays, ...custPays].reduce((s, p) => s + Number(p.amount), 0))],
+      ['Retours (valeur TTC)', n0(rets.reduce((s, r) => s + Number(r.total_ttc), 0))], []);
+  }
+
+  if (v.achats) {
+    const [pos, sps, sups] = await Promise.all([
+      fetchAllRows(() => supa.from('purchase_orders').select('*, purchase_order_lines(*)').gte('order_date', from).lte('order_date', to).order('order_date', { ascending: true })),
+      fetchAllRows(() => supa.from('supplier_payments').select('*').gte('paid_at', fromTs).lt('paid_at', toTs).order('paid_at', { ascending: true })),
+      fetchAllRows(() => supa.from('suppliers').select('*').order('name')),
+    ]);
+    const poNumber = Object.fromEntries([...Object.values(purchaseOrders), ...pos].map(p => [p.id, p.number]));
+    add('Bons de commande', pos.map(p => ({
+      'N°': p.number, 'Date': p.order_date, 'Fournisseur': p.supplier_name || '', 'Réf. fournisseur': p.supplier_ref || '',
+      'Total commandé': n0(p.total), 'Valeur reçue': n0(p.received_value), 'Payé': n0(p.amount_paid),
+      'Dette': Math.max(0, n0(p.received_value) - n0(p.amount_paid)), 'Échéance': p.due_date || '', 'Statut': PO_STATUS_LABELS[p.status] || p.status,
+      'Articles': (p.purchase_order_lines || []).map(l => `${l.description} × ${l.qty_ordered}`).join(' ; '),
+    })));
+    add('Paiements fournisseurs', sps.map(p => ({
+      'Date': dt(p.paid_at), 'Bon de commande': poNumber[p.po_id] || '', 'Fournisseur': sups.find(s => s.id === p.supplier_id)?.name || '',
+      'Montant': n0(p.amount), 'Moyen': payLabel(p.method), 'Référence': p.reference || '',
+    })));
+    const debtBySup = {};
+    Object.values(purchaseOrders).forEach(p => { if (p.supplier_id) debtBySup[p.supplier_id] = (debtBySup[p.supplier_id] || 0) + poToPay(p); });
+    add('Fournisseurs', sups.map(s => ({
+      'Nom': s.name, 'Contact': s.contact_name || '', 'Téléphone': s.phone || '', 'Email': s.email || '', 'Adresse': s.address || '',
+      'Délai de paiement (j)': s.payment_terms_days, 'Dette actuelle': n0(debtBySup[s.id]),
+    })));
+    summary.push(['Achats'], ['Commandes passées (total)', n0(pos.filter(p => p.status !== 'annule').reduce((s, p) => s + Number(p.total), 0))],
+      ['Paiements fournisseurs', n0(sps.reduce((s, p) => s + Number(p.amount), 0))], []);
+  }
+
+  if (v.tresorerie && treasuryConfigured()) {
+    const [ledger, bal] = await Promise.all([
+      fetchAllRows(() => supa.from('treasury_ledger').select('*').gte('occurred_at', fromTs).lt('occurred_at', toTs).order('occurred_at', { ascending: true })),
+      supa.rpc('treasury_balances'),
+    ]);
+    const accName = id => (bal.data || []).find(a => a.account_id === id)?.name || '';
+    add('Trésorerie journal', ledger.map(l => ({
+      'Date': dt(l.occurred_at), 'Compte': accName(l.account_id), 'Type': LEDGER_SOURCE[l.source] || l.source, 'Libellé': l.label || '',
+      'Entrée': Number(l.amount) > 0 ? n0(l.amount) : '', 'Sortie': Number(l.amount) < 0 ? -n0(l.amount) : '',
+    })));
+    add('Trésorerie soldes', (bal.data || []).map(a => ({
+      'Compte': a.name, 'Type': ACCOUNT_KINDS[a.kind] || a.kind, 'Solde de départ': n0(a.opening_balance), 'Mouvements': n0(a.flows),
+      'Solde actuel': n0(a.balance), 'Actif': a.active ? 'oui' : 'non',
+    })));
+    summary.push(['Trésorerie'], ['Entrées de la période', n0(ledger.filter(l => l.amount > 0 && l.source !== 'transfert').reduce((s, l) => s + Number(l.amount), 0))],
+      ['Sorties de la période', n0(-ledger.filter(l => l.amount < 0 && l.source !== 'transfert').reduce((s, l) => s + Number(l.amount), 0))],
+      ['Trésorerie actuelle (tous comptes actifs)', n0((bal.data || []).filter(a => a.active).reduce((s, a) => s + Number(a.balance), 0))], []);
+  }
+
+  if (v.stock) {
+    const moves = await fetchAllRows(() => supa.from('movements').select('*').gte('at', fromTs).lt('at', toTs).order('at', { ascending: true }));
+    add('Mouvements de stock', moves.map(m => ({
+      'Date': dt(m.at), 'Type': MOVE_TYPE_LABELS[m.type] || m.type, 'Article': articleName(m.article_id) || 'Article supprimé', 'Quantité': m.qty,
+      'Coût unitaire': m.unit_cost != null ? n0(m.unit_cost) : '', 'Par': m.by_name || '',
+      'Origine': m.document_id ? 'Facture ' + (Object.values(salesDocs).find(d => d.id === m.document_id)?.number || '')
+        : m.purchase_order_id ? 'Achat ' + (purchaseOrders[m.purchase_order_id]?.number || '')
+        : m.return_id ? 'Retour' : '',
+    })));
+    add('Stock actuel', Object.entries(articles).map(([id, a]) => ({
+      'Article': a.name, 'Catégorie': a.category || '', 'Stock': Number(a.qty) || 0, 'Seuil d\'alerte': a.threshold ?? 3,
+      'Prix d\'achat': n0(a.buy_price), 'Prix de vente': n0(a.sell_price),
+      'Valeur au prix d\'achat': Math.max(0, Number(a.qty) || 0) * n0(a.buy_price), 'Valeur au prix de vente': Math.max(0, Number(a.qty) || 0) * n0(a.sell_price),
+    })));
+  }
+
+  if (v.clients) {
+    const unpaid = {};
+    Object.values(salesDocs).filter(d => d.doc_type === 'facture' && d.status === 'emise' && d.customer_id)
+      .forEach(d => { unpaid[d.customer_id] = (unpaid[d.customer_id] || 0) + invoiceRemaining(d); });
+    add('Clients', Object.entries(customers).map(([id, c]) => ({
+      'Nom': c.name, 'Téléphone': c.phone || '', 'Email': c.email || '', 'Adresse': c.address || '', 'Segment': c.segment || '',
+      'Plafond de crédit': n0(c.credit_limit), 'Crédit comptoir dû': n0(c.credit_balance), 'Factures impayées': n0(unpaid[id]),
+    })).sort((a, b) => a.Nom.localeCompare(b.Nom, 'fr')));
+  }
+
+  if (v.livraisons) {
+    const dels = await fetchAllRows(() => supa.from('deliveries').select('*').gte('created_at', fromTs).lt('created_at', toTs).order('created_at', { ascending: true }));
+    add('Livraisons', dels.map(d => ({
+      'N°': d.number, 'Créée le': dt(d.created_at), 'Prévue le': d.scheduled_date || '', 'Destinataire': d.customer_name, 'Téléphone': d.customer_phone || '',
+      'Adresse': d.address, 'Commune': d.commune || '', 'Livreur': memberName(d.assigned_to), 'Statut': DELIVERY_STATUS_LABELS[d.status] || d.status,
+      'Tentatives': d.attempts, 'Frais': n0(d.delivery_fee), 'À encaisser': n0(d.amount_to_collect), 'Encaissé': n0(d.collected_amount),
+      'Moyen': payLabel(d.collected_method), 'Livrée le': dt(d.delivered_at), 'Motif d\'échec': d.failure_reason || '',
+    })));
+  }
+
+  // Sommaire complété (feuille déjà ajoutée : on la remplace)
+  wb.Sheets['Sommaire'] = XLSX.utils.aoa_to_sheet(summary);
+  if (wb.SheetNames.length === 1) wb.SheetNames.length = 0;
+  return wb;
+}
+
+// --- Impression groupée des factures ---------------------------------------
+function openBatchInvoicePrint() {
+  openFormSheet({
+    title: 'Imprimer les factures',
+    intro: 'Toutes les factures émises sur la période, une par page, dans un seul document (à enregistrer en PDF ou imprimer).',
+    fields: [
+      ...exportPeriodFields(),
+      { id: 'cancelled', type: 'checkbox', label: 'Inclure les factures annulées', value: false },
+      { id: 'quotes', type: 'checkbox', label: 'Inclure aussi les devis', value: false },
+    ],
+    submitLabel: 'Préparer l\'impression',
+    onSubmit: async (v) => {
+      checkPeriod(v);
+      const docs = await fetchAllRows(() => supa.from('sales_documents').select('*, sales_document_lines(*), invoice_payments(*)')
+        .gte('issue_date', v.from).lte('issue_date', v.to).order('issue_date', { ascending: true }));
+      const list = docs.filter(d => (d.doc_type === 'facture' && (d.status === 'emise' || (v.cancelled && d.status === 'annulee'))) || (v.quotes && d.doc_type === 'devis'))
+        .sort((a, b) => (a.doc_type + a.number).localeCompare(b.doc_type + b.number));
+      if (!list.length) throw new Error('Aucun document sur cette période.');
+      if (list.length > 300) throw new Error(`${list.length} documents : réduisez la période (300 maximum par impression).`);
+      document.getElementById('printArea').innerHTML = list.map(d => buildPrintableHtml(d, shopInfo || {})).join('');
+      toast(`${list.length} document(s) prêts à imprimer.`);
+      setTimeout(() => window.print(), 80);
+    },
+  });
+}
+
+// --- Relevé de compte client ------------------------------------------------
+function openCustomerStatement(customerId) {
+  const list = Object.entries(customers).sort((a, b) => a[1].name.localeCompare(b[1].name, 'fr'));
+  if (!list.length) { toast('Aucun client enregistré.'); return; }
+  const today = isoDate(new Date());
+  openFormSheet({
+    title: 'Relevé de compte client',
+    intro: 'Crédit comptoir (achats à crédit, paiements, retours déduits) et factures non soldées du client.',
+    fields: [
+      { id: 'customer', type: 'select', label: 'Client', value: customerId || list[0][0], options: list.map(([id, c]) => ({ value: id, label: `${c.name}${Number(c.credit_balance) > 0 ? ` — doit ${fmtFCFA(c.credit_balance)}` : ''}` })) },
+      { id: 'from', type: 'date', label: 'Du', value: addDays(today, -89) },
+      { id: 'to', type: 'date', label: 'Au', value: today },
+    ],
+    submitLabel: 'Imprimer le relevé',
+    onSubmit: async (v) => {
+      checkPeriod(v);
+      const html = await buildCustomerStatement(v.customer, v.from, v.to);
+      document.getElementById('printArea').innerHTML = html;
+      setTimeout(() => window.print(), 80);
+    },
+  });
+}
+
+async function buildCustomerStatement(cid, from, to) {
+  const c = customers[cid];
+  const fromTs = dayStartIso(from);
+  // Tous les événements depuis le début de la période (y compris après la fin)
+  // pour reconstituer le solde d'ouverture à partir du solde actuel.
+  const [moves, pays, rets, docs] = await Promise.all([
+    fetchAllRows(() => supa.from('movements').select('*').eq('customer_id', cid).eq('type', 'vente').eq('on_credit', true).gte('at', fromTs).order('at', { ascending: true })),
+    fetchAllRows(() => supa.from('customer_payments').select('*').eq('customer_id', cid).gte('paid_at', fromTs).order('paid_at', { ascending: true })),
+    fetchAllRows(() => supa.from('returns').select('*').eq('customer_id', cid).eq('refund_type', 'credit_client').gte('return_date', from).order('return_date', { ascending: true })),
+    fetchAllRows(() => supa.from('sales_documents').select('*').eq('customer_id', cid).eq('doc_type', 'facture').eq('status', 'emise').order('issue_date', { ascending: true })),
+  ]);
+  const ev = [
+    ...moves.map(m => ({ d: m.at.slice(0, 10), t: m.at, label: `Achat à crédit : ${articleName(m.article_id) || 'article'} × ${m.qty}`, debit: m.qty * (m.unit_price ?? articles[m.article_id]?.sell_price ?? 0), credit: 0 })),
+    ...pays.map(p => ({ d: p.paid_at.slice(0, 10), t: p.paid_at, label: `Paiement (${payLabel(p.method)}${p.reference ? ' · ' + p.reference : ''})`, debit: 0, credit: Number(p.amount) })),
+    ...rets.map(r => ({ d: r.return_date, t: r.return_date + 'T23:59:59', label: `Retour ${r.number} déduit du crédit`, debit: 0, credit: Number(r.refund_amount) })),
+  ].sort((a, b) => a.t.localeCompare(b.t));
+  const net = list => list.reduce((s, e) => s + e.debit - e.credit, 0);
+  const inPeriod = ev.filter(e => e.d <= to);
+  const after = ev.filter(e => e.d > to);
+  const closing = Number(c.credit_balance || 0) - net(after);
+  const opening = closing - net(inPeriod);
+  let running = opening;
+  const rows = inPeriod.map(e => { running += e.debit - e.credit; return { ...e, bal: running }; });
+  const unpaid = docs.map(d => ({ ...d, rest: invoiceRemaining(d) })).filter(d => d.rest > 0);
+  const s = shopInfo || {};
+  return `<div class="pdoc">
+    <div class="phead">
+      <div class="pshop"><h1>${escapeHtml(s.legal_name || s.name || 'Boutique')}</h1>
+        <div>${escapeHtml(s.address || '')}</div><div>${[s.phone, s.email].filter(Boolean).map(escapeHtml).join(' · ')}</div></div>
+      <div class="pinfo"><div class="ptitle">RELEVÉ DE COMPTE</div><div>Du ${fmtDate(from)} au ${fmtDate(to)}</div><div>Édité le ${new Date().toLocaleDateString('fr-FR')}</div></div>
+    </div>
+    <div class="pclient"><div class="lbl">Client</div><strong>${escapeHtml(c.name)}</strong>
+      ${c.phone ? `<div>${escapeHtml(c.phone)}</div>` : ''}${c.address ? `<div>${escapeHtml(c.address)}</div>` : ''}</div>
+    <table>
+      <thead><tr><th>Date</th><th>Opération</th><th class="n">Débit</th><th class="n">Crédit</th><th class="n">Solde</th></tr></thead>
+      <tbody>
+        <tr><td>${fmtDate(from)}</td><td><em>Solde au début de la période</em></td><td></td><td></td><td class="n">${fmtFCFA(opening)}</td></tr>
+        ${rows.map(e => `<tr><td>${fmtDate(e.d)}</td><td>${escapeHtml(e.label)}</td><td class="n">${e.debit ? fmtFCFA(e.debit) : ''}</td><td class="n">${e.credit ? fmtFCFA(e.credit) : ''}</td><td class="n">${fmtFCFA(e.bal)}</td></tr>`).join('')}
+      </tbody>
+    </table>
+    <div class="ptotals">
+      <div><span>Total achats à crédit</span><span>${fmtFCFA(rows.reduce((s2, e) => s2 + e.debit, 0))}</span></div>
+      <div><span>Total paiements et retours</span><span>${fmtFCFA(rows.reduce((s2, e) => s2 + e.credit, 0))}</span></div>
+      <div class="grand"><span>Solde dû au ${fmtDate(to)}</span><span>${fmtFCFA(closing)}</span></div>
+    </div>
+    ${unpaid.length ? `<h3 style="margin:18px 0 6px; font-size:11pt">Factures non soldées (à ce jour)</h3>
+    <table><thead><tr><th>N°</th><th>Date</th><th>Échéance</th><th class="n">Total TTC</th><th class="n">Reste à payer</th></tr></thead>
+      <tbody>${unpaid.map(d => `<tr><td>${escapeHtml(d.number)}</td><td>${fmtDate(d.issue_date)}</td><td>${fmtDate(d.due_date)}</td><td class="n">${fmtFCFA(d.total_ttc)}</td><td class="n">${fmtFCFA(d.rest)}</td></tr>`).join('')}</tbody>
+    </table>
+    <div class="ptotals"><div class="grand"><span>Total factures à régler</span><span>${fmtFCFA(unpaid.reduce((s2, d) => s2 + d.rest, 0))}</span></div></div>` : ''}
+    <div class="plegal">Relevé établi d'après les opérations enregistrées dans le logiciel de gestion de la boutique. Merci de nous signaler toute différence.</div>
+  </div>`;
+}
+
+document.getElementById('exportAccountingBtn')?.addEventListener('click', openAccountingExport);
+document.getElementById('exportInvoicesBtn')?.addEventListener('click', openBatchInvoicePrint);
+document.getElementById('exportStatementBtn')?.addEventListener('click', () => openCustomerStatement(null));
 
 // ---------------------------------------------------------------------------
 // Retours & remboursements (module 5)
