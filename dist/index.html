@@ -348,6 +348,7 @@ form { display: flex; flex-direction: column; gap: 14px; }
     <button class="tab-btn" data-tab="clients" id="clientsTabBtn">Clients</button>
     <button class="tab-btn" data-tab="ventes" id="ventesTabBtn">Ventes</button>
     <button class="tab-btn" data-tab="achats" id="achatsTabBtn" hidden>Achats</button>
+    <button class="tab-btn" data-tab="livraisons" id="livraisonsTabBtn">Livraisons</button>
     <button class="tab-btn" data-tab="articles" id="articlesTabBtn">Articles</button>
   </nav>
 
@@ -416,6 +417,23 @@ form { display: flex; flex-direction: column; gap: 14px; }
         <option value="retard">Paiements en retard</option>
         <option value="brouillons">Brouillons</option>
         <option value="fournisseurs">Fournisseurs</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="fixed-tab-panel" id="fixedPanel-livraisons" hidden>
+    <div class="tiles" id="deliveryTiles"></div>
+    <button class="btn btn-ghost btn-block" id="newDeliveryBtn">+ Nouvelle livraison</button>
+    <div class="searchbar">
+      <input type="search" id="delSearchInput" placeholder="N°, client, commune…">
+      <select id="delFilter">
+        <option value="actives">En attente (à livrer, en cours, échecs)</option>
+        <option value="a_livrer">À livrer</option>
+        <option value="en_cours">En cours</option>
+        <option value="echec">Échecs</option>
+        <option value="livree">Livrées</option>
+        <option value="annulee">Annulées</option>
+        <option value="toutes">Toutes</option>
       </select>
     </div>
   </div>
@@ -515,6 +533,10 @@ form { display: flex; flex-direction: column; gap: 14px; }
 
   <section id="tab-achats" hidden>
     <div class="article-list" id="poList"></div>
+  </section>
+
+  <section id="tab-livraisons" hidden>
+    <div class="article-list" id="deliveryList"></div>
   </section>
 
   <section id="tab-articles" hidden>
@@ -620,6 +642,9 @@ let returnsMap = {};  // id -> retour avec .return_lines
 let suppliersMap = {};    // id -> fournisseur
 let purchaseOrders = {};  // id -> bon de commande avec .purchase_order_lines et .supplier_payments
 let purchasingChannel = null;
+let deliveriesMap = {};  // id -> livraison
+let teamMembers = {};    // id -> {display_name, email, role} (pour l'assignation)
+let deliveriesChannel = null;
 let currentTab = 'dashboard';
 let currentProfile = null; // {role, display_name, email}
 let articlesChannel = null;
@@ -667,13 +692,16 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     currentTab = btn.dataset.tab;
-    ['dashboard', 'stock', 'historique', 'clients', 'ventes', 'achats', 'articles'].forEach(t => {
+    ['dashboard', 'stock', 'historique', 'clients', 'ventes', 'achats', 'livraisons', 'articles'].forEach(t => {
       document.getElementById('tab-' + t).hidden = (t !== currentTab);
       document.getElementById('fixedPanel-' + t).hidden = (t !== currentTab);
     });
     document.getElementById('fabMove').hidden = (currentTab !== 'stock');
   });
 });
+function goToTab(tab) {
+  document.querySelector(`.tab-btn[data-tab="${tab}"]`)?.click();
+}
 
 // ---------------------------------------------------------------------------
 // Rendering
@@ -797,6 +825,7 @@ function renderAll() {
   renderCustomers();
   renderSalesDocs();
   renderPurchasing();
+  renderDeliveries();
   renderDashboard();
 }
 
@@ -1371,7 +1400,7 @@ function openDocumentView(id) {
   if (isQuote && ['en_attente', 'accepte'].includes(d.status)) actions.push(['convert', 'Convertir en facture', 'primary']);
   if (!isQuote && d.status === 'brouillon') actions.push(['issue', 'Émettre la facture', 'primary']);
   if (!isQuote && d.status === 'emise' && remaining > 0) actions.push(['pay', 'Enregistrer un paiement', 'primary']);
-  if (!isQuote && d.status === 'emise') actions.push(['return', 'Enregistrer un retour', 'ghost']);
+  if (!isQuote && d.status === 'emise') actions.push(['deliver', 'Créer une livraison', 'ghost'], ['return', 'Enregistrer un retour', 'ghost']);
   actions.push(['print', 'Imprimer / PDF', 'ghost']);
   if ((isQuote && d.status === 'en_attente') || (!isQuote && d.status === 'brouillon')) actions.push(['edit', 'Modifier', 'ghost']);
   if (isQuote && d.status === 'en_attente') actions.push(['accept', 'Marquer accepté', 'ghost'], ['refuse', 'Marquer refusé', 'ghost']);
@@ -1460,6 +1489,7 @@ function openDocumentView(id) {
       switch (action) {
         case 'print': printDocument(id); break;
         case 'return': close(); openReturnEditor(id); break;
+        case 'deliver': close(); openDeliveryEditor(id, null); break;
         case 'edit': close(); openDocumentEditor(d.doc_type, id); break;
         case 'accept': await run('set_quote_status', { p_id: id, p_status: 'accepte' }, 'Devis marqué accepté.'); break;
         case 'refuse': await run('set_quote_status', { p_id: id, p_status: 'refuse' }, 'Devis marqué refusé.'); break;
@@ -2193,6 +2223,384 @@ document.getElementById('newPoBtn')?.addEventListener('click', () => openPurchas
 document.getElementById('newSupplierBtn')?.addEventListener('click', () => openSupplierSheet(null));
 
 // ---------------------------------------------------------------------------
+// Livraisons (module 4)
+// Le livreur ne voit que ses livraisons (règle en base) et n'a que cet onglet.
+// À la livraison, le montant encaissé est reporté sur la facture d'origine
+// (hors frais de livraison) côté serveur.
+// ---------------------------------------------------------------------------
+const DEL_STATUS = {
+  a_livrer: { label: 'À livrer', cls: 'warn', rank: 1 },
+  en_cours: { label: 'En cours', cls: 'accent', rank: 0 },
+  echec:    { label: 'Échec', cls: 'bad', rank: 2 },
+  livree:   { label: 'Livrée', cls: 'ok', rank: 3 },
+  annulee:  { label: 'Annulée', cls: '', rank: 4 },
+};
+function isLivreur() { return currentProfile?.role === 'livreur'; }
+function canManageDeliveries() { return currentProfile && ['owner', 'gerant', 'comptable', 'vendeur'].includes(currentProfile.role); }
+function todayIso() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function deliveryLate(d) {
+  return (d.status === 'a_livrer' || d.status === 'en_cours') && d.scheduled_date && d.scheduled_date < todayIso();
+}
+function memberName(id) {
+  if (!id) return 'Non assigné';
+  if (id === currentProfile?.id) return (currentProfile.display_name || currentProfile.email) + ' (vous)';
+  const m = teamMembers[id];
+  return m ? (m.display_name || m.email) : 'Membre retiré';
+}
+
+async function loadDeliveries() {
+  const [del, mem] = await Promise.all([
+    supa.from('deliveries').select('*').order('created_at', { ascending: false }).limit(500),
+    isLivreur() ? Promise.resolve({ data: [] }) : supa.from('profiles').select('id, display_name, email, role'),
+  ]);
+  if (del.error) { console.error(del.error); return; }
+  deliveriesMap = {};
+  (del.data || []).forEach(d => { deliveriesMap[d.id] = d; });
+  teamMembers = {};
+  (mem.data || []).forEach(m => { teamMembers[m.id] = m; });
+  renderDeliveries();
+}
+
+function renderDeliveries() {
+  const host = document.getElementById('deliveryList');
+  if (!host) return;
+  const all = Object.values(deliveriesMap);
+  const today = todayIso();
+  const todayCount = all.filter(d => (d.status === 'a_livrer' || d.status === 'en_cours') && (!d.scheduled_date || d.scheduled_date <= today)).length;
+  const lateCount = all.filter(deliveryLate).length;
+  const toCollect = all.filter(d => d.status === 'a_livrer' || d.status === 'en_cours').reduce((s, d) => s + (Number(d.amount_to_collect) || 0), 0);
+  document.getElementById('deliveryTiles').innerHTML = `
+    <div class="tile"><div class="label">${isLivreur() ? 'Mes livraisons du jour' : "À livrer aujourd'hui"}</div><div class="value">${todayCount}</div></div>
+    <div class="tile"><div class="label">En retard</div><div class="value" style="${lateCount ? 'color:var(--bad)' : ''}">${lateCount}</div></div>
+    <div class="tile"><div class="label">À encaisser</div><div class="value small">${fmtFCFA(toCollect)}</div></div>`;
+
+  const filter = document.getElementById('delFilter')?.value || 'actives';
+  const search = (document.getElementById('delSearchInput')?.value || '').trim().toLowerCase();
+  let list = Object.entries(deliveriesMap);
+  if (filter === 'actives') list = list.filter(([, d]) => ['a_livrer', 'en_cours', 'echec'].includes(d.status));
+  else if (filter !== 'toutes') list = list.filter(([, d]) => d.status === filter);
+  if (search) {
+    list = list.filter(([, d]) => [d.number, d.customer_name, d.commune, d.address, d.customer_phone, salesDocs[d.source_document_id]?.number]
+      .some(v => (v || '').toLowerCase().includes(search)));
+  }
+  list.sort((a, b) => {
+    const ra = DEL_STATUS[a[1].status].rank, rb = DEL_STATUS[b[1].status].rank;
+    if (ra !== rb) return ra - rb;
+    if (ra <= 2) return (a[1].scheduled_date || '9999').localeCompare(b[1].scheduled_date || '9999');
+    return new Date(b[1].updated_at) - new Date(a[1].updated_at);
+  });
+  if (list.length === 0) {
+    host.innerHTML = `<div class="empty-state">${all.length === 0
+      ? (isLivreur() ? 'Aucune livraison ne vous est assignée pour le moment.' : 'Aucune livraison. Créez-en une ci-dessus ou depuis une facture.')
+      : 'Aucune livraison ne correspond.'}</div>`;
+    return;
+  }
+  host.innerHTML = list.map(([id, d]) => {
+    const st = DEL_STATUS[d.status];
+    const when = d.scheduled_date ? fmtDate(d.scheduled_date) + (d.time_slot ? ' · ' + escapeHtml(d.time_slot) : '') : 'Date non fixée';
+    const right = (d.status === 'a_livrer' || d.status === 'en_cours') && Number(d.amount_to_collect) > 0
+      ? `<div class="qty">${fmtFCFA(d.amount_to_collect)}<span class="unit">à encaisser</span></div>`
+      : d.status === 'livree' && Number(d.collected_amount) > 0
+        ? `<div class="qty good">${fmtFCFA(d.collected_amount)}<span class="unit">encaissé</span></div>`
+        : '';
+    return `<div class="article-row" data-del="${id}">
+      <div class="info"><div class="name">${escapeHtml(d.customer_name)}${d.commune ? ' · ' + escapeHtml(d.commune) : ''}</div>
+        <div class="meta">${escapeHtml(d.number)} · ${when}${isLivreur() ? '' : ' · ' + escapeHtml(memberName(d.assigned_to))}
+          <span class="doc-badge ${st.cls}">${st.label}</span>${deliveryLate(d) ? ' <span class="doc-badge bad">En retard</span>' : ''}</div></div>
+      ${right}
+    </div>`;
+  }).join('');
+  host.querySelectorAll('[data-del]').forEach(el => el.addEventListener('click', () => openDeliveryView(el.dataset.del)));
+}
+document.getElementById('delFilter')?.addEventListener('change', renderDeliveries);
+document.getElementById('delSearchInput')?.addEventListener('input', renderDeliveries);
+
+// ---- Éditeur
+function openDeliveryEditor(sourceInvoiceId = null, id = null) {
+  const del = id ? deliveriesMap[id] : null;
+  const inv = sourceInvoiceId ? salesDocs[sourceInvoiceId] : (del?.source_document_id ? salesDocs[del.source_document_id] : null);
+  const invRemaining = inv ? invoiceRemaining(inv) : 0;
+  const cust = inv?.customer_id ? customers[inv.customer_id] : null;
+  const contentDefault = inv ? inv.sales_document_lines.map(l => `${l.qty} × ${l.description}`).join(', ') : '';
+  const v = del || {
+    customer_name: inv?.customer_name || '', customer_phone: inv?.customer_phone || cust?.phone || '',
+    address: cust?.address || '', commune: '', scheduled_date: todayIso(), time_slot: '', assigned_to: '',
+    content: contentDefault, delivery_fee: 0, amount_to_collect: invRemaining, notes: '',
+  };
+  const members = Object.entries(teamMembers)
+    .sort((a, b) => (a[1].role === 'livreur' ? 0 : 1) - (b[1].role === 'livreur' ? 0 : 1) || (a[1].display_name || '').localeCompare(b[1].display_name || '', 'fr'));
+  const memberOptions = members.map(([mid, m]) => `<option value="${mid}" ${v.assigned_to === mid ? 'selected' : ''}>${escapeHtml(m.display_name || m.email)} — ${ROLE_LABELS[m.role] || m.role}</option>`).join('');
+  const customerOptions = Object.entries(customers).sort((a, b) => a[1].name.localeCompare(b[1].name, 'fr'))
+    .map(([cid, c]) => `<option value="${cid}" ${v.customer_id === cid ? 'selected' : ''}>${escapeHtml(c.name)}</option>`).join('');
+  const hasLivreur = members.some(([, m]) => m.role === 'livreur');
+
+  const backdrop = document.createElement('div');
+  backdrop.className = 'sheet-backdrop';
+  backdrop.innerHTML = `
+    <div class="sheet">
+      <div class="sheet-head"><h2>${del ? `Modifier ${escapeHtml(del.number)}` : 'Nouvelle livraison'}</h2><button class="sheet-close" type="button">✕</button></div>
+      ${inv ? `<div class="doc-meta"><div>Facture <strong>${escapeHtml(inv.number)}</strong> · reste à payer <strong>${fmtFCFA(invRemaining)}</strong></div></div>` : ''}
+      <form id="delForm">
+        ${inv ? '' : `<div class="field"><label for="delCustomer">Client enregistré (facultatif)</label>
+          <select id="delCustomer"><option value="">— Aucun —</option>${customerOptions}</select></div>`}
+        <div class="field-row">
+          <div class="field"><label for="delName">Destinataire</label><input id="delName" required value="${escapeHtml(v.customer_name)}"></div>
+          <div class="field"><label for="delPhone">Téléphone</label><input id="delPhone" value="${escapeHtml(v.customer_phone || '')}" placeholder="07 00 00 00 00"></div>
+        </div>
+        <div class="field"><label for="delAddress">Adresse / repères</label><textarea id="delAddress" required placeholder="Ex : Cocody Angré 8e tranche, près de la pharmacie">${escapeHtml(v.address || '')}</textarea></div>
+        <div class="field-row">
+          <div class="field"><label for="delCommune">Commune</label><input id="delCommune" value="${escapeHtml(v.commune || '')}" placeholder="Ex : Cocody"></div>
+          <div class="field"><label for="delSlot">Créneau</label><input id="delSlot" value="${escapeHtml(v.time_slot || '')}" placeholder="Ex : matin, 14h-16h"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label for="delDate">Date prévue</label><input id="delDate" type="date" value="${v.scheduled_date || ''}"></div>
+          <div class="field"><label for="delAssignee">Livreur</label>
+            <select id="delAssignee"><option value="">— Non assigné —</option>${memberOptions}</select></div>
+        </div>
+        ${hasLivreur ? '' : '<div class="current-stock-hint">Aucun livreur dans l\'équipe : le propriétaire peut en inviter un via le bouton « Équipe ».</div>'}
+        <div class="field"><label for="delContent">Contenu du colis</label><input id="delContent" value="${escapeHtml(v.content || '')}" placeholder="Ex : 2 chargeurs, 1 coque"></div>
+        <div class="field-row">
+          <div class="field"><label for="delFee">Frais de livraison</label><input id="delFee" type="number" min="0" step="1" inputmode="numeric" value="${Number(v.delivery_fee) || 0}"></div>
+          <div class="field"><label for="delCollect">Montant à encaisser</label><input id="delCollect" type="number" min="0" step="1" inputmode="numeric" value="${Number(v.amount_to_collect) || 0}"></div>
+        </div>
+        <div class="current-stock-hint" id="delCollectHint">${inv
+          ? 'Par défaut : reste à payer de la facture + frais de livraison. Mettez 0 si le client a déjà tout payé.'
+          : 'Somme que le livreur doit récupérer auprès du client (0 si déjà payé).'}</div>
+        <div class="field"><label for="delNotes">Instructions</label><input id="delNotes" value="${escapeHtml(v.notes || '')}" placeholder="Ex : appeler avant d'arriver"></div>
+        <p class="sheet-error" id="delError"></p>
+        <button type="submit" class="btn btn-primary btn-block">${del ? 'Enregistrer' : 'Créer la livraison'}</button>
+      </form>
+    </div>`;
+  document.body.appendChild(backdrop);
+  const close = () => backdrop.remove();
+  backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(); });
+  backdrop.querySelector('.sheet-close').addEventListener('click', close);
+
+  // Montant à encaisser suit les frais tant que l'utilisateur ne l'a pas modifié
+  let collectEdited = !!del;
+  const feeEl = document.getElementById('delFee'), collectEl = document.getElementById('delCollect');
+  collectEl.addEventListener('input', () => { collectEdited = true; });
+  feeEl.addEventListener('input', () => {
+    if (!collectEdited) collectEl.value = (inv ? invRemaining : 0) + (Number(feeEl.value) || 0);
+  });
+  const custSel = document.getElementById('delCustomer');
+  custSel?.addEventListener('change', () => {
+    const c = customers[custSel.value];
+    if (!c) return;
+    document.getElementById('delName').value = c.name;
+    if (c.phone) document.getElementById('delPhone').value = c.phone;
+    if (c.address && !document.getElementById('delAddress').value.trim()) document.getElementById('delAddress').value = c.address;
+  });
+
+  document.getElementById('delForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errEl = document.getElementById('delError');
+    errEl.textContent = '';
+    if (!navigator.onLine) { errEl.textContent = 'Connexion internet nécessaire.'; return; }
+    const btn = e.target.querySelector('button[type="submit"]'); btn.disabled = true;
+    const payload = {
+      source_document_id: inv ? inv.id : null,
+      customer_id: inv ? (inv.customer_id || null) : (custSel?.value || null),
+      customer_name: document.getElementById('delName').value,
+      customer_phone: document.getElementById('delPhone').value,
+      address: document.getElementById('delAddress').value,
+      commune: document.getElementById('delCommune').value,
+      scheduled_date: document.getElementById('delDate').value || null,
+      time_slot: document.getElementById('delSlot').value,
+      assigned_to: document.getElementById('delAssignee').value || null,
+      content: document.getElementById('delContent').value,
+      delivery_fee: Number(feeEl.value) || 0,
+      amount_to_collect: Number(collectEl.value) || 0,
+      notes: document.getElementById('delNotes').value,
+    };
+    const { data: newId, error } = await supa.rpc('save_delivery', { p_id: del ? id : null, p_data: payload });
+    if (error) { errEl.textContent = error.message; btn.disabled = false; return; }
+    markActivity();
+    await loadDeliveries();
+    close();
+    toast(del ? 'Livraison modifiée.' : 'Livraison créée.');
+    openDeliveryView(newId);
+  });
+}
+
+// ---- Fiche
+function openDeliveryView(id) {
+  const d = deliveriesMap[id];
+  if (!d) return;
+  const st = DEL_STATUS[d.status];
+  const mine = d.assigned_to === currentProfile.id;
+  const mgr = canManageDeliveries();
+  const canAct = mine || mgr;
+  const boss = currentProfile && ['owner', 'gerant'].includes(currentProfile.role);
+  const inv = salesDocs[d.source_document_id];
+  const actions = [];
+  if (canAct && d.status === 'a_livrer') actions.push(['start', 'Partir en livraison', 'primary']);
+  if (canAct && (d.status === 'a_livrer' || d.status === 'en_cours')) actions.push(['done', 'Marquer livrée', d.status === 'en_cours' ? 'primary' : 'ghost'], ['fail', 'Signaler un échec', 'ghost']);
+  if (canAct && d.status === 'echec') actions.push(['reschedule', 'Reprogrammer', 'primary']);
+  if (mgr && (d.status === 'a_livrer' || d.status === 'echec')) actions.push(['edit', 'Modifier', 'ghost']);
+  actions.push(['print', 'Imprimer le bon de livraison', 'ghost']);
+  if (inv && !isLivreur()) actions.push(['invoice', 'Voir la facture', 'ghost']);
+  if (boss && !['livree', 'annulee'].includes(d.status)) actions.push(['cancel', 'Annuler la livraison', 'ghost']);
+
+  const backdrop = document.createElement('div');
+  backdrop.className = 'sheet-backdrop';
+  backdrop.innerHTML = `
+    <div class="sheet">
+      <div class="sheet-head"><h2>Livraison ${escapeHtml(d.number)}</h2><button class="sheet-close" type="button">✕</button></div>
+      <div><span class="doc-badge ${st.cls}">${st.label}</span>${deliveryLate(d) ? ' <span class="doc-badge bad">En retard</span>' : ''}</div>
+      <div class="doc-meta">
+        <div>Destinataire : <strong>${escapeHtml(d.customer_name)}</strong>${d.customer_phone ? ` · <strong>${escapeHtml(d.customer_phone)}</strong>` : ''}</div>
+        <div>Adresse : <strong>${escapeHtml(d.address)}</strong>${d.commune ? ` (${escapeHtml(d.commune)})` : ''}</div>
+        <div>Prévue : <strong>${d.scheduled_date ? fmtDate(d.scheduled_date) : 'non fixée'}</strong>${d.time_slot ? ' · ' + escapeHtml(d.time_slot) : ''}</div>
+        <div>Livreur : <strong>${escapeHtml(memberName(d.assigned_to))}</strong>${d.attempts ? ` · ${d.attempts} tentative(s)` : ''}</div>
+        ${inv ? `<div>Facture : <strong>${escapeHtml(inv.number)}</strong></div>` : ''}
+        ${d.notes ? `<div>Instructions : ${escapeHtml(d.notes)}</div>` : ''}
+        ${d.failure_reason && d.status !== 'livree' ? `<div style="color:var(--bad)">${d.status === 'annulee' ? 'Motif d\'annulation' : 'Dernier échec'} : <strong>${escapeHtml(d.failure_reason)}</strong></div>` : ''}
+      </div>
+      ${d.content ? `<div class="doc-view-line"><div class="d">Contenu<small>${escapeHtml(d.content)}</small></div></div>` : ''}
+      <div class="doc-totals">
+        ${Number(d.delivery_fee) > 0 ? `<div><span>Frais de livraison</span><span>${fmtFCFA(d.delivery_fee)}</span></div>` : ''}
+        <div class="grand"><span>Montant à encaisser</span><span>${fmtFCFA(d.amount_to_collect)}</span></div>
+        ${d.status === 'livree' ? `<div><span>Encaissé${d.collected_method ? ' (' + (PAY_METHODS[d.collected_method] || d.collected_method) + ')' : ''}</span><span>${fmtFCFA(d.collected_amount)}</span></div>
+          <div><span>Livrée le</span><span>${new Date(d.delivered_at).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</span></div>` : ''}
+      </div>
+      <div style="display:flex; flex-direction:column; gap:8px">
+        ${actions.map(([k, l, kind]) => `<button type="button" class="btn btn-${kind} btn-block" data-action="${k}">${l}</button>`).join('')}
+      </div>
+    </div>`;
+  document.body.appendChild(backdrop);
+  const close = () => backdrop.remove();
+  backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(); });
+  backdrop.querySelector('.sheet-close').addEventListener('click', close);
+  const reopen = () => setTimeout(() => openDeliveryView(id), 0);
+  const setStatus = async (params, msg) => {
+    if (!navigator.onLine) throw new Error('Connexion internet nécessaire.');
+    const { error } = await supa.rpc('set_delivery_status', { p_id: id, ...params });
+    if (error) throw error;
+    markActivity();
+    await loadDeliveries();
+    if (params.p_status === 'livree' && d.source_document_id) loadSalesDocuments();
+    toast(msg);
+  };
+
+  backdrop.querySelectorAll('[data-action]').forEach(btn => btn.addEventListener('click', async () => {
+    const a = btn.dataset.action;
+    if (a === 'print') { printDelivery(id); return; }
+    if (a === 'edit') { close(); openDeliveryEditor(null, id); return; }
+    if (a === 'invoice') { close(); openDocumentView(d.source_document_id); return; }
+    if (a === 'start') {
+      try { await setStatus({ p_status: 'en_cours' }, 'Bonne route !'); close(); reopen(); } catch (err) { toast(err.message); }
+      return;
+    }
+    close();
+    if (a === 'done') {
+      const toCollect = Number(d.amount_to_collect) || 0;
+      openFormSheet({
+        title: 'Livraison effectuée',
+        intro: toCollect > 0 ? `Montant prévu à encaisser : <strong>${fmtFCFA(toCollect)}</strong>${d.source_document_id ? ' (reporté automatiquement sur la facture, hors frais de livraison).' : '.'}` : 'Aucun montant à encaisser sur cette livraison.',
+        fields: toCollect > 0 ? [
+          { id: 'amount', type: 'number', label: 'Montant réellement encaissé (FCFA)', value: toCollect, min: 0, step: 1 },
+          { id: 'method', type: 'select', label: 'Moyen de paiement', value: 'especes', options: Object.entries(PAY_METHODS).map(([value, label]) => ({ value, label })) },
+          { id: 'reference', label: 'Référence (n° de transaction)', placeholder: 'Facultatif' },
+        ] : [],
+        submitLabel: 'Confirmer la livraison',
+        onSubmit: async (v) => {
+          const amount = toCollect > 0 ? Number(v.amount) || 0 : 0;
+          if (amount < 0 || amount > toCollect) throw new Error(`Le montant doit être compris entre 0 et ${fmtFCFA(toCollect)}.`);
+          await setStatus({ p_status: 'livree', p_amount: amount, p_method: amount > 0 ? v.method : null, p_reference: amount > 0 ? v.reference : null }, 'Livraison confirmée.');
+          reopen();
+        },
+      });
+    } else if (a === 'fail') {
+      openFormSheet({
+        title: 'Échec de livraison',
+        fields: [{ id: 'reason', type: 'select', label: 'Motif', value: 'Client injoignable',
+          options: ['Client injoignable', 'Client absent', 'Adresse introuvable', 'Client a refusé le colis', 'Client sans argent', 'Autre'].map(x => ({ value: x, label: x })) },
+          { id: 'detail', label: 'Précision', placeholder: 'Facultatif' }],
+        submitLabel: "Enregistrer l'échec",
+        onSubmit: async (v) => {
+          await setStatus({ p_status: 'echec', p_reason: v.detail.trim() ? `${v.reason} — ${v.detail.trim()}` : v.reason }, 'Échec enregistré.');
+          reopen();
+        },
+      });
+    } else if (a === 'reschedule') {
+      const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+      openFormSheet({
+        title: 'Reprogrammer la livraison',
+        fields: [{ id: 'date', type: 'date', label: 'Nouvelle date', value: `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}` }],
+        submitLabel: 'Reprogrammer',
+        onSubmit: async (v) => {
+          await setStatus({ p_status: 'a_livrer', p_new_date: v.date || null }, 'Livraison reprogrammée.');
+          reopen();
+        },
+      });
+    } else if (a === 'cancel') {
+      openFormSheet({
+        title: 'Annuler la livraison',
+        fields: [{ id: 'reason', label: "Motif d'annulation", required: true, placeholder: 'Ex : le client viendra chercher en boutique' }],
+        submitLabel: "Confirmer l'annulation",
+        onSubmit: async (v) => {
+          if (!v.reason.trim()) throw new Error('Le motif est obligatoire.');
+          await setStatus({ p_status: 'annulee', p_reason: v.reason }, 'Livraison annulée.');
+          reopen();
+        },
+      });
+    }
+  }));
+}
+
+// ---- Bon de livraison
+function printDelivery(id) {
+  const d = deliveriesMap[id];
+  if (!d) return;
+  const s = shopInfo || {};
+  const shopName = s.legal_name || s.name || 'Boutique';
+  const inv = salesDocs[d.source_document_id];
+  document.getElementById('printArea').innerHTML = `
+    <div class="pdoc">
+      <div class="phead">
+        <div class="pshop"><h1>${escapeHtml(shopName)}</h1>
+          ${s.address ? `<div>${escapeHtml(s.address)}</div>` : ''}
+          ${[s.phone, s.email].filter(Boolean).length ? `<div>${[s.phone, s.email].filter(Boolean).map(escapeHtml).join(' · ')}</div>` : ''}</div>
+        <div class="pinfo">
+          <div class="ptitle">BON DE LIVRAISON</div>
+          <div><strong>N° ${escapeHtml(d.number)}</strong></div>
+          <div>Date prévue : ${d.scheduled_date ? fmtDate(d.scheduled_date) : '—'}${d.time_slot ? ' · ' + escapeHtml(d.time_slot) : ''}</div>
+          ${inv ? `<div>Facture : ${escapeHtml(inv.number)}</div>` : ''}
+          ${d.status === 'annulee' ? '<div class="pstamp">ANNULÉE</div>' : ''}
+        </div>
+      </div>
+      <div class="pclient">
+        <div class="lbl">Destinataire</div>
+        <div><strong>${escapeHtml(d.customer_name)}</strong>${d.customer_phone ? ' · ' + escapeHtml(d.customer_phone) : ''}</div>
+        <div>${escapeHtml(d.address)}${d.commune ? ' — ' + escapeHtml(d.commune) : ''}</div>
+      </div>
+      <table>
+        <thead><tr><th>Contenu</th><th class="n">Qté</th></tr></thead>
+        <tbody>${inv
+          ? inv.sales_document_lines.map(l => `<tr><td>${escapeHtml(l.description)}</td><td class="n">${l.qty}</td></tr>`).join('')
+          : `<tr><td>${escapeHtml(d.content || '—')}</td><td class="n"></td></tr>`}</tbody>
+      </table>
+      <div class="ptotals">
+        ${Number(d.delivery_fee) > 0 ? `<div><span>Frais de livraison</span><span>${fmtFCFA(d.delivery_fee)}</span></div>` : ''}
+        <div class="grand"><span>À encaisser à la livraison</span><span>${fmtFCFA(d.amount_to_collect)}</span></div>
+      </div>
+      ${d.notes ? `<div class="pnotes"><strong>Instructions :</strong> ${escapeHtml(d.notes)}</div>` : ''}
+      <div class="pnotes"><strong>Livreur :</strong> ${escapeHtml(memberName(d.assigned_to).replace(' (vous)', ''))}</div>
+      <div style="display:flex; gap:24px; margin-top:28px">
+        <div style="flex:1; border:1px solid #bbb; border-radius:6px; height:80px; padding:6px; font-size:8.5pt; color:#555">Reçu en bon état — nom et signature du client</div>
+        <div style="flex:1; border:1px solid #bbb; border-radius:6px; height:80px; padding:6px; font-size:8.5pt; color:#555">Signature du livreur</div>
+      </div>
+    </div>`;
+  setTimeout(() => window.print(), 50);
+}
+
+document.getElementById('newDeliveryBtn')?.addEventListener('click', () => openDeliveryEditor(null, null));
+
+// ---------------------------------------------------------------------------
 // Retours & remboursements (module 5)
 // ---------------------------------------------------------------------------
 const RETURN_REASONS = {
@@ -2664,17 +3072,17 @@ function applyRoleToUI() {
   document.getElementById('shopSettingsBtn').hidden = !gerant;
   document.getElementById('achatsTabBtn').hidden = !canManageInvoices();
   document.getElementById('teamBtn').hidden = currentProfile.role !== 'owner';
-  // Si le vendeur était sur l'onglet Articles au moment où le rôle se charge, on le ramène sur Stock
-  if (!gerant && currentTab === 'articles') {
-    currentTab = 'stock';
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === 'stock'));
-    document.getElementById('tab-stock').hidden = false;
-    document.getElementById('tab-historique').hidden = true;
-    document.getElementById('tab-articles').hidden = true;
-    document.getElementById('fixedPanel-stock').hidden = false;
-    document.getElementById('fixedPanel-historique').hidden = true;
-    document.getElementById('fixedPanel-articles').hidden = true;
-  }
+  const livreur = currentProfile.role === 'livreur';
+  // Le livreur n'a que l'onglet Livraisons (ses livraisons)
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    if (livreur) b.hidden = b.dataset.tab !== 'livraisons';
+    else if (b.dataset.tab === 'dashboard' || b.dataset.tab === 'stock' || b.dataset.tab === 'historique' || b.dataset.tab === 'clients') b.hidden = false;
+  });
+  document.getElementById('newDeliveryBtn').hidden = livreur;
+  if (livreur) document.getElementById('delFilter').value = 'actives';
+  // Si l'onglet courant n'est plus accessible avec ce rôle, on bascule
+  const currentBtn = document.querySelector(`.tab-btn[data-tab="${currentTab}"]`);
+  if (!currentBtn || currentBtn.hidden) goToTab(livreur ? 'livraisons' : 'stock');
   const label = ROLE_LABELS[currentProfile.role] || (gerant ? 'Gérant' : 'Vendeur');
   const cls = gerant ? 'gerant' : 'vendeur';
   document.getElementById('whoLabel').innerHTML = `${escapeHtml(currentProfile.display_name || currentProfile.email)} <span class="role-badge ${cls}">${label}</span>`;
@@ -3388,6 +3796,7 @@ function showLogin() {
   document.getElementById('fixedPanel-clients').hidden = true;
   document.getElementById('fixedPanel-ventes').hidden = true;
   document.getElementById('fixedPanel-achats').hidden = true;
+  document.getElementById('fixedPanel-livraisons').hidden = true;
   document.getElementById('fixedPanel-articles').hidden = true;
   document.getElementById('offlineStatus').hidden = true;
   document.getElementById('pendingBadge').hidden = true;
@@ -3412,6 +3821,7 @@ function showSignup() {
   document.getElementById('fixedPanel-clients').hidden = true;
   document.getElementById('fixedPanel-ventes').hidden = true;
   document.getElementById('fixedPanel-achats').hidden = true;
+  document.getElementById('fixedPanel-livraisons').hidden = true;
   document.getElementById('fixedPanel-articles').hidden = true;
   document.getElementById('offlineStatus').hidden = true;
   document.getElementById('pendingBadge').hidden = true;
@@ -3721,7 +4131,7 @@ function showApp() {
   document.getElementById('logoutBtn').hidden = false;
   document.getElementById('changePasswordBtn').hidden = false;
   document.querySelector('.app-fixed-top nav.tabs').hidden = false;
-  ['dashboard', 'stock', 'historique', 'clients', 'ventes', 'achats', 'articles'].forEach(t => {
+  ['dashboard', 'stock', 'historique', 'clients', 'ventes', 'achats', 'livraisons', 'articles'].forEach(t => {
     document.getElementById('fixedPanel-' + t).hidden = (t !== currentTab);
   });
   document.getElementById('fixedTop').hidden = false;
@@ -3859,6 +4269,7 @@ function enterAppWithProfile() {
   loadSalesDocuments();
   loadReturns();
   loadPurchasing();
+  loadDeliveries();
   updateOnlineStatus();
   updatePendingBadge();
   syncPendingMovements();
@@ -3895,6 +4306,8 @@ document.getElementById('logoutBtn').addEventListener('click', async () => {
   returnsMap = {};
   suppliersMap = {};
   purchaseOrders = {};
+  deliveriesMap = {};
+  teamMembers = {};
   shopInfo = null;
   showLogin();
 });
@@ -3909,6 +4322,9 @@ function subscribeRealtime() {
     .subscribe();
   customersChannel = supa.channel('public:customers')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, loadCustomers)
+    .subscribe();
+  deliveriesChannel = supa.channel('public:deliveries')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'deliveries' }, loadDeliveries)
     .subscribe();
   purchasingChannel = supa.channel('public:purchasing')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'suppliers' }, loadPurchasing)
@@ -3928,6 +4344,7 @@ function unsubscribeRealtime() {
   if (customersChannel) { supa.removeChannel(customersChannel); customersChannel = null; }
   if (salesDocsChannel) { supa.removeChannel(salesDocsChannel); salesDocsChannel = null; }
   if (purchasingChannel) { supa.removeChannel(purchasingChannel); purchasingChannel = null; }
+  if (deliveriesChannel) { supa.removeChannel(deliveriesChannel); deliveriesChannel = null; }
 }
 
 async function start() {
