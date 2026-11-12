@@ -1,13 +1,13 @@
 {
-  "name": "Boutique Stock",
-  "short_name": "Boutique Stock",
-  "description": "Suivi de stock en temps réel : ventes, réassorts, pertes et historique.",
+  "name": "ERP Boutique",
+  "short_name": "ERP Boutique",
+  "description": "Gestion de boutique : caisse, stock, factures, livraisons, trésorerie.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#f3f5f2",
-  "theme_color": "#3c7a52",
-  "orientation": "portrait",
+  "background_color": "#f3f5f3",
+  "theme_color": "#16261d",
+  "orientation": "any",
   "icons": [
     {
       "src": "icon-192.png",

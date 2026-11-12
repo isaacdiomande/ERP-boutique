@@ -3,11 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Boutique Stock</title>
+<title>ERP Boutique</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="icon-192.png">
 
 <!-- PWA : installation sur l'écran d'accueil -->
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#3c7a52">
+<meta name="theme-color" content="#16261d">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="mobile-web-app-capable" content="yes">
@@ -512,6 +515,38 @@ form { display: flex; flex-direction: column; gap: 14px; }
 .pdoc .pnotes { margin-top: 14px; font-size: 9pt; }
 .pdoc .plegal { margin-top: 18px; font-size: 8pt; color: #555; border-top: 1px solid #ddd; padding-top: 8px; }
 .pdoc .pstamp { display: inline-block; border: 2px solid #b23b3b; color: #b23b3b; font-weight: 700; padding: 2px 10px; border-radius: 4px; font-size: 11pt; margin-top: 6px; }
+/* Téléphone : menu en tiroir */
+.menu-toggle { display: none; }
+.nav-scrim { display: none; }
+@media (max-width: 759px) {
+  body:has(#fixedTop:not([hidden])) { padding-left: 14px; padding-right: 14px; }
+  body:has(#fixedTop:not([hidden])) .app-fixed-top { margin-inline: -14px; padding-inline: 14px; }
+  .sidebar { width: min(290px, 84vw); transform: translateX(-102%); transition: transform 0.2s ease; z-index: 40; box-shadow: none; }
+  body.nav-open .sidebar { transform: none; box-shadow: 0 0 40px rgba(0,0,0,0.3); }
+  body.nav-open .nav-scrim { display: block; position: fixed; inset: 0; background: rgba(10,20,14,0.45); z-index: 35; }
+  body.nav-open { overflow: hidden; }
+  .menu-toggle { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin-left: -6px; border: none; border-radius: 10px; background: transparent; color: var(--ink); cursor: pointer; flex: none; }
+  .topbar { flex-wrap: nowrap; padding-block: 10px 10px; gap: 8px; }
+  .topbar .brand { flex: 1; }
+  .topbar .brand h1 { font-size: 1.2rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .page-sub { display: none; }
+  .top-cta { min-height: 40px; padding: 0 12px; font-size: 0.85rem; }
+  .kpi .k-value { font-size: 1.2rem; }
+  .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .dash-bars { height: 140px; gap: 3px; }
+  .pos { grid-template-columns: minmax(0, 1fr); }
+  .pos-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .pos-item { min-height: 100px; padding: 11px; }
+  .pos-item.in { padding: 10px; }
+  .pos-cart { position: static; max-height: none; scroll-margin-top: 70px; }
+  .pos-mobile-bar:not([hidden]) { position: fixed; left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); z-index: 15; display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 16px; border: none; border-radius: 14px; background: #16261d; color: #fff; font: inherit; font-size: 0.85rem; box-shadow: 0 8px 24px rgba(0,0,0,0.25); cursor: pointer; }
+  .pos-mobile-bar strong { flex: 1; text-align: right; font-family: var(--font-mono); font-size: 1rem; }
+  #tab-caisse { padding-bottom: 80px; }
+  .toolbar-row .btn { flex: 1 1 auto; }
+  .toolbar-row span[style] { display: none; }
+}
+@media (min-width: 760px) { .pos-mobile-bar { display: none !important; } }
+
 </style>
 </head>
 <body>
@@ -552,7 +587,11 @@ form { display: flex; flex-direction: column; gap: 14px; }
       </div>
     </div>
   </aside>
+  <div class="nav-scrim" id="navScrim" hidden></div>
   <div class="topbar">
+    <button type="button" class="menu-toggle" id="menuToggle" aria-label="Ouvrir le menu" aria-expanded="false">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+    </button>
     <div class="brand"><h1 id="pageTitle">Tableau de bord</h1><span class="page-sub" id="pageSub"></span></div>
     <div class="topbar-actions">
       <span class="status-pill offline-pill" id="offlineStatus" hidden>
@@ -806,7 +845,8 @@ form { display: flex; flex-direction: column; gap: 14px; }
         <div class="pos-cats" id="posCats" role="group" aria-label="Catégories"></div>
         <div class="pos-grid" id="posProducts"></div>
       </div>
-      <aside class="pos-cart" aria-label="Panier">
+      <button type="button" class="pos-mobile-bar" id="posMobileBar" hidden><span id="posMobileCount">Panier</span><strong id="posMobileTotal">0 F</strong><span>Voir le panier ↓</span></button>
+      <aside class="pos-cart" id="posCart" aria-label="Panier">
         <div class="pos-cart-head"><h2>Vente en cours</h2><button type="button" class="btn btn-ghost pos-small" id="posClearBtn">Vider</button></div>
         <div class="field" style="margin:0"><label for="posCustomer">Client</label><select id="posCustomer"></select></div>
         <div class="pos-lines" id="posLines"></div>
@@ -4285,6 +4325,10 @@ function renderPos() {
   document.getElementById('posQuoteBtn').hidden = !canManageInvoices() && !['vendeur'].includes(currentProfile?.role);
   document.getElementById('posInvoiceBtn').hidden = document.getElementById('posQuoteBtn').hidden;
   document.getElementById('posReceipt').hidden = !posLastSale;
+  const mb = document.getElementById('posMobileBar');
+  mb.hidden = !posCart.length;
+  document.getElementById('posMobileCount').textContent = `Panier · ${units} article${units > 1 ? 's' : ''}`;
+  document.getElementById('posMobileTotal').textContent = fmtFCFA(total);
 }
 
 async function posCheckout() {
@@ -4448,6 +4492,18 @@ document.getElementById('docTabs').addEventListener('click', e => {
   renderSalesDocs();
 });
 document.querySelector('#docTabs button[data-f=""]').classList.add('on');
+
+// Menu en tiroir (téléphone)
+function setNavOpen(open) {
+  document.body.classList.toggle('nav-open', open);
+  document.getElementById('navScrim').hidden = !open;
+  document.getElementById('menuToggle').setAttribute('aria-expanded', String(open));
+}
+document.getElementById('menuToggle').addEventListener('click', () => setNavOpen(!document.body.classList.contains('nav-open')));
+document.getElementById('navScrim').addEventListener('click', () => setNavOpen(false));
+document.querySelector('.sidebar').addEventListener('click', e => { if (e.target.closest('button')) setNavOpen(false); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('nav-open')) setNavOpen(false); });
+document.getElementById('posMobileBar').addEventListener('click', () => document.getElementById('posCart').scrollIntoView({ behavior: 'smooth', block: 'start' }));
 
 // ---------------------------------------------------------------------------
 // Retours & remboursements (module 5)

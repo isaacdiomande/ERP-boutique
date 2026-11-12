@@ -3,7 +3,7 @@
 // Les données (articles, mouvements) viennent toujours de Supabase en direct —
 // rien ici ne les met en cache.
 
-const CACHE_NAME = 'boutique-stock-v1';
+const CACHE_NAME = 'erp-boutique-v2';
 const APP_SHELL = [
   './',
   './index.html',
@@ -11,6 +11,9 @@ const APP_SHELL = [
   './manifest.json',
   './icon-192.png',
   './icon-512.png',
+  './fonts/dm-sans-latin-400-normal.woff2',
+  './fonts/dm-sans-latin-600-normal.woff2',
+  './fonts/ibm-plex-mono-latin-500-normal.woff2',
 ];
 
 self.addEventListener('install', (event) => {
