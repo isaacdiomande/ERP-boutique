@@ -181,6 +181,61 @@ nav.tabs button.active .nav-badge { background: rgba(0,0,0,0.2); color: #fff; }
 .topbar-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
 .top-cta { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 18px; width: auto; }
 
+/* Caisse */
+#tab-caisse:not([hidden]) { display: block; }
+.pos { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 18px; align-items: start; }
+@media (max-width: 1150px) { .pos { grid-template-columns: minmax(0, 1fr) 320px; } }
+.pos-left { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.pos-search { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid #dde4df; border-radius: 10px; padding: 0 12px; height: 46px; color: var(--ink-dim); }
+.pos-search input { border: 0; outline: none; background: transparent; font: inherit; font-size: 0.95rem; flex: 1; min-width: 0; color: var(--ink); }
+.pos-search:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(60,122,82,0.15); }
+.pos-cats { display: flex; flex-wrap: wrap; gap: 8px; }
+.pos-chip { height: 36px; padding: 0 14px; border-radius: 999px; border: 1px solid #dde4df; background: var(--surface); color: var(--ink); font-size: 0.82rem; cursor: pointer; }
+.pos-chip.on { background: #16261d; color: #fff; border-color: #16261d; font-weight: 600; }
+.pos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+.pos-item { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; text-align: left; padding: 14px; min-height: 116px; border-radius: 12px; background: var(--surface); border: 1px solid var(--border); color: var(--ink); cursor: pointer; }
+.pos-item:hover { border-color: #b9c8be; }
+.pos-item.in { background: #eaf4ee; border: 2px solid var(--accent); padding: 13px; }
+.pos-item.out { background: #f7f8f7; opacity: 0.55; cursor: not-allowed; }
+.pi-cat { font-size: 0.74rem; color: var(--ink-dim); }
+.pi-name { font-size: 0.94rem; font-weight: 600; line-height: 1.25; min-height: 2.4em; }
+.pi-foot { display: flex; align-items: baseline; gap: 8px; width: 100%; margin-top: auto; }
+.pi-price { font-family: var(--font-mono); font-weight: 600; font-size: 0.94rem; flex: 1; }
+.pi-stock { font-size: 0.74rem; color: var(--ink-dim); white-space: nowrap; }
+.pi-stock.low { color: #9a6200; font-weight: 600; } .pi-stock.out { color: var(--bad); font-weight: 600; }
+.pi-badge { position: absolute; top: 8px; right: 8px; min-width: 24px; height: 24px; border-radius: 999px; background: var(--accent); color: #fff; font-family: var(--font-mono); font-size: 0.78rem; font-weight: 600; display: flex; align-items: center; justify-content: center; padding: 0 6px; }
+.pos-cart { position: sticky; top: 104px; max-height: calc(100vh - 124px); overflow-y: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+.pos-cart-head { display: flex; align-items: center; gap: 10px; }
+.pos-cart-head h2 { font-size: 1.1rem; font-weight: 700; flex: 1; }
+.pos-small { width: auto; min-height: 34px; padding: 0 12px; font-size: 0.8rem; }
+.pos-lines { display: flex; flex-direction: column; }
+.pos-line { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid #edf1ee; }
+.pl-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.pl-name { font-size: 0.88rem; font-weight: 600; }
+.pl-unit { font-family: var(--font-mono); font-size: 0.74rem; color: var(--ink-dim); }
+.pl-qty { display: flex; align-items: center; border: 1px solid #dde4df; border-radius: 9px; }
+.pl-qty button { width: 34px; height: 34px; border: 0; background: transparent; font-size: 1.1rem; cursor: pointer; color: var(--ink); }
+.pl-qty span { font-family: var(--font-mono); width: 24px; text-align: center; font-size: 0.88rem; }
+.pl-total { font-family: var(--font-mono); font-weight: 600; font-size: 0.88rem; width: 80px; text-align: right; }
+.pos-empty { color: var(--ink-dim); font-size: 0.86rem; text-align: center; padding: 22px 8px; border: 1px dashed #c9d5cd; border-radius: 10px; line-height: 1.6; }
+.pos-sum { display: flex; flex-direction: column; gap: 4px; }
+.ps-row { font-size: 0.84rem; color: var(--ink-dim); }
+.ps-total { display: flex; align-items: baseline; padding-top: 8px; border-top: 1px solid #edf1ee; }
+.ps-total span:first-child { flex: 1; font-weight: 600; }
+.ps-total span:last-child { font-family: var(--font-mono); font-size: 1.7rem; font-weight: 600; }
+.pos-methods { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.pos-pay { min-height: 44px; border-radius: 10px; border: 1px solid #dde4df; background: var(--surface); color: var(--ink); font-size: 0.8rem; cursor: pointer; padding: 0 4px; }
+.pos-pay.on { background: #eaf4ee; color: #1f4a30; border: 2px solid var(--accent); font-weight: 700; }
+.pos-warn { font-size: 0.8rem; color: var(--warn); background: var(--warn-bg); border-radius: 8px; padding: 8px 10px; }
+.pos-pay-btn { min-height: 54px; font-size: 1.05rem; font-weight: 700; border-radius: 12px; }
+.pos-pay-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.pos-alt { display: flex; gap: 8px; }
+.pos-alt .btn { flex: 1; min-height: 42px; }
+.pos-alt .btn, .pos-small { background: var(--surface); border: 1px solid #dde4df; color: var(--ink); }
+.pos-alt .btn:disabled, .pos-small:disabled { opacity: 0.5; cursor: not-allowed; }
+.pos-receipt { font-size: 0.84rem; color: var(--good); background: var(--good-bg); border-radius: 8px; padding: 8px 10px; }
+.pdoc.pticket { max-width: 80mm; font-size: 9.5pt; }
+
 /* Tableau de bord */
 .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
 .kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
@@ -443,6 +498,7 @@ form { display: flex; flex-direction: column; gap: 14px; }
     <nav class="tabs">
     <div class="nav-group"><div class="nav-group-label">Vendre</div>
       <button class="tab-btn active" data-tab="dashboard" data-title="Tableau de bord"><svg class="nav-ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg><span>Tableau de bord</span><span class="nav-badge" id="navBadge-dashboard" hidden></span></button>
+      <button class="tab-btn" data-tab="caisse" data-title="Caisse" id="caisseTabBtn"><svg class="nav-ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h2l2.4 11.2a1 1 0 0 0 1 .8h8.9a1 1 0 0 0 1-.8L20 8H6.2M9 20h.01M17 20h.01"/></svg><span>Caisse</span><span class="nav-badge" id="navBadge-caisse" hidden></span></button>
       <button class="tab-btn" data-tab="ventes" data-title="Devis & factures" id="ventesTabBtn"><svg class="nav-ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8zM14 3v5h5M9 13h6M9 17h6"/></svg><span>Devis & factures</span><span class="nav-badge" id="navBadge-ventes" hidden></span></button>
       <button class="tab-btn" data-tab="clients" data-title="Clients" id="clientsTabBtn"><svg class="nav-ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 20v-1a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v1M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 20v-1a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg><span>Clients</span><span class="nav-badge" id="navBadge-clients" hidden></span></button>
       <button class="tab-btn" data-tab="livraisons" data-title="Livraisons" id="livraisonsTabBtn"><svg class="nav-ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h11v10H3zM14 9h4l3 3v4h-7M7 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4M17 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4"/></svg><span>Livraisons</span><span class="nav-badge" id="navBadge-livraisons" hidden></span></button>
@@ -483,6 +539,7 @@ form { display: flex; flex-direction: column; gap: 14px; }
   </div>
 
   <div class="fixed-tab-panel" id="fixedPanel-dashboard"></div>
+  <div class="fixed-tab-panel" id="fixedPanel-caisse" hidden></div>
 
   <div class="fixed-tab-panel" id="fixedPanel-stock" hidden>
     <div class="tiles" id="summaryTiles"></div>
@@ -703,6 +760,36 @@ form { display: flex; flex-direction: column; gap: 14px; }
     </div>
   </section>
 
+  <section id="tab-caisse" hidden>
+    <div class="pos">
+      <div class="pos-left">
+        <label class="pos-search">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+          <input type="search" id="posSearch" placeholder="Nom de l'article… (Entrée pour ajouter)" aria-label="Rechercher un article" autocomplete="off">
+        </label>
+        <div class="pos-cats" id="posCats" role="group" aria-label="Catégories"></div>
+        <div class="pos-grid" id="posProducts"></div>
+      </div>
+      <aside class="pos-cart" aria-label="Panier">
+        <div class="pos-cart-head"><h2>Vente en cours</h2><button type="button" class="btn btn-ghost pos-small" id="posClearBtn">Vider</button></div>
+        <div class="field" style="margin:0"><label for="posCustomer">Client</label><select id="posCustomer"></select></div>
+        <div class="pos-lines" id="posLines"></div>
+        <div class="pos-sum">
+          <div class="ps-row"><span id="posCount">0 article</span></div>
+          <div class="ps-total"><span>Total</span><span id="posTotal">0 F</span></div>
+        </div>
+        <div class="pos-methods" id="posMethods" role="radiogroup" aria-label="Moyen de paiement"></div>
+        <div class="pos-warn" id="posCreditWarn" hidden>Choisissez le client pour une vente à crédit.</div>
+        <button type="button" class="btn btn-primary pos-pay-btn" id="posPayBtn">Encaisser</button>
+        <div class="pos-alt">
+          <button type="button" class="btn btn-ghost" id="posQuoteBtn">Faire un devis</button>
+          <button type="button" class="btn btn-ghost" id="posInvoiceBtn">Facturer</button>
+        </div>
+        <div class="pos-receipt" id="posReceipt" hidden>✓ Vente enregistrée. <button type="button" class="card-link" id="posReceiptBtn">Imprimer le reçu</button></div>
+      </aside>
+    </div>
+  </section>
+
   <section id="tab-stock" hidden>
     <div class="article-list" id="articleList"></div>
   </section>
@@ -892,7 +979,8 @@ document.querySelectorAll('.tab-btn[data-tab]').forEach(btn => {
     currentTab = btn.dataset.tab;
     document.getElementById('pageTitle').textContent = btn.dataset.title || btn.textContent.trim();
     if (currentTab === 'dashboard') loadDashboardStats();
-    ['dashboard', 'stock', 'historique', 'clients', 'ventes', 'achats', 'livraisons', 'tresorerie', 'rapports', 'articles'].forEach(t => {
+    if (currentTab === 'caisse') { renderPos(); setTimeout(() => document.getElementById('posSearch')?.focus(), 0); }
+    ['dashboard', 'caisse', 'stock', 'historique', 'clients', 'ventes', 'achats', 'livraisons', 'tresorerie', 'rapports', 'articles'].forEach(t => {
       document.getElementById('tab-' + t).hidden = (t !== currentTab);
       document.getElementById('fixedPanel-' + t).hidden = (t !== currentTab);
     });
@@ -1044,6 +1132,7 @@ function renderAll() {
   renderPurchasing();
   renderDeliveries();
   renderTreasury();
+  renderPos();
   renderDashboard();
 }
 
@@ -1431,20 +1520,20 @@ document.getElementById('docFilter')?.addEventListener('change', renderSalesDocs
 document.getElementById('docSearchInput')?.addEventListener('input', renderSalesDocs);
 
 // ---- Éditeur (création / modification d'un devis ou d'une facture brouillon)
-function openDocumentEditor(docType, id = null) {
+function openDocumentEditor(docType, id = null, prefill = null) {
   const existing = id ? salesDocs[id] : null;
   const vatApplicable = shopInfo ? shopInfo.vat_applicable !== false : true;
   const vatRate = shopInfo ? Number(shopInfo.vat_rate ?? 18) : 18;
   let lines = existing
     ? existing.sales_document_lines.map(l => ({ article_id: l.article_id || '', description: l.description, qty: l.qty, unit_price_ttc: Number(l.unit_price_ttc) }))
-    : [{ article_id: '', description: '', qty: 1, unit_price_ttc: '' }];
+    : (prefill?.lines?.length ? prefill.lines.map(l => ({ ...l })) : [{ article_id: '', description: '', qty: 1, unit_price_ttc: '' }]);
 
   const articleOptions = Object.entries(articles)
     .sort((a, b) => a[1].name.localeCompare(b[1].name, 'fr'))
     .map(([aid, a]) => `<option value="${aid}">${escapeHtml(a.name)} (${a.qty ?? 0} en stock)</option>`).join('');
   const customerOptions = Object.entries(customers)
     .sort((a, b) => a[1].name.localeCompare(b[1].name, 'fr'))
-    .map(([cid, c]) => `<option value="${cid}" ${existing?.customer_id === cid ? 'selected' : ''}>${escapeHtml(c.name)}</option>`).join('');
+    .map(([cid, c]) => `<option value="${cid}" ${(existing?.customer_id || prefill?.customer_id) === cid ? 'selected' : ''}>${escapeHtml(c.name)}</option>`).join('');
 
   const isQuote = docType === 'devis';
   const title = existing ? `Modifier ${isQuote ? 'le devis' : 'la facture'}` : (isQuote ? 'Nouveau devis' : 'Nouvelle facture');
@@ -4028,6 +4117,196 @@ async function openSecuritySheet() {
 document.getElementById('securityBtn')?.addEventListener('click', openSecuritySheet);
 
 // ---------------------------------------------------------------------------
+// Caisse (refonte, étape 2) : vente comptoir multi-articles en une opération.
+// Chaque ligne du panier est enregistrée par record_movement (même client,
+// même moyen de paiement) ; hors-ligne, les ventes payées sont mises en file.
+// ---------------------------------------------------------------------------
+let posCart = [];            // [{ id, qty }]
+let posCustomer = '';
+let posMethod = 'especes';
+let posCategory = '';
+let posQuery = '';
+let posBusy = false;
+let posLastSale = null;
+const POS_METHODS = [['especes', 'Espèces'], ['orange_money', 'Orange Money'], ['wave', 'Wave'], ['mtn_money', 'MTN MoMo'], ['moov_money', 'Moov Money'], ['credit', 'À crédit']];
+
+function posArticles() {
+  const q = posQuery.trim().toLowerCase();
+  return Object.entries(articles)
+    .filter(([, a]) => (!posCategory || (a.category || '') === posCategory) && (!q || (a.name || '').toLowerCase().includes(q) || (a.category || '').toLowerCase().includes(q)))
+    .sort((x, y) => {
+      const ox = (Number(x[1].qty) || 0) <= 0, oy = (Number(y[1].qty) || 0) <= 0;
+      return ox === oy ? x[1].name.localeCompare(y[1].name, 'fr') : (ox ? 1 : -1);
+    });
+}
+function posLineQty(id) { return posCart.find(l => l.id === id)?.qty || 0; }
+function posTotal() { return posCart.reduce((s, l) => s + l.qty * (Number(articles[l.id]?.sell_price) || 0), 0); }
+
+function posAdd(id, delta = 1) {
+  const a = articles[id];
+  if (!a) return;
+  const stock = Number(a.qty) || 0;
+  const line = posCart.find(l => l.id === id);
+  const next = (line?.qty || 0) + delta;
+  if (delta > 0 && next > stock) { toast(stock <= 0 ? `« ${a.name} » est épuisé.` : `Stock insuffisant : ${stock} disponible(s).`); return; }
+  if (next <= 0) posCart = posCart.filter(l => l.id !== id);
+  else if (line) line.qty = next;
+  else posCart.push({ id, qty: next });
+  posLastSale = null;
+  renderPos();
+}
+
+function renderPos() {
+  const host = document.getElementById('posProducts');
+  if (!host) return;
+  // Catégories
+  const cats = [...new Set(Object.values(articles).map(a => a.category).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'fr'));
+  if (posCategory && !cats.includes(posCategory)) posCategory = '';
+  document.getElementById('posCats').innerHTML = ['', ...cats].map(c =>
+    `<button type="button" class="pos-chip${c === posCategory ? ' on' : ''}" data-cat="${escapeHtml(c)}">${c ? escapeHtml(c) : 'Tout'}</button>`).join('');
+  // Articles
+  const list = posArticles();
+  host.innerHTML = list.length ? list.map(([id, a]) => {
+    const stock = Number(a.qty) || 0;
+    const inCart = posLineQty(id);
+    const st = stock <= 0 ? 'out' : stock <= (a.threshold ?? 3) ? 'low' : '';
+    return `<button type="button" class="pos-item${inCart ? ' in' : ''}${st === 'out' ? ' out' : ''}" data-add="${id}" ${st === 'out' ? 'aria-disabled="true"' : ''}>
+      <span class="pi-cat">${escapeHtml(a.category || 'Sans catégorie')}</span>
+      <span class="pi-name">${escapeHtml(a.name)}</span>
+      <span class="pi-foot"><span class="pi-price">${fmtFCFA(a.sell_price)}</span><span class="pi-stock ${st}">${stock <= 0 ? 'Épuisé' : stock + ' en stock'}</span></span>
+      ${inCart ? `<span class="pi-badge">${inCart}</span>` : ''}
+    </button>`;
+  }).join('') : '<div class="empty-state" style="grid-column:1/-1">Aucun article ne correspond.</div>';
+
+  // Client
+  const custSel = document.getElementById('posCustomer');
+  const opts = '<option value="">— Client de passage —</option>' + Object.entries(customers)
+    .sort((x, y) => x[1].name.localeCompare(y[1].name, 'fr'))
+    .map(([id, c]) => `<option value="${id}">${escapeHtml(c.name)}${Number(c.credit_balance) > 0 ? ` — doit ${fmtFCFA(c.credit_balance)}` : ''}</option>`).join('');
+  if (custSel.dataset.sig !== opts) { custSel.innerHTML = opts; custSel.dataset.sig = opts; }
+  if (posCustomer && !customers[posCustomer]) posCustomer = '';
+  custSel.value = posCustomer;
+
+  // Panier
+  const lines = document.getElementById('posLines');
+  posCart = posCart.filter(l => articles[l.id]);
+  lines.innerHTML = posCart.length ? posCart.map(l => {
+    const a = articles[l.id];
+    const p = Number(a.sell_price) || 0;
+    return `<div class="pos-line">
+      <div class="pl-info"><span class="pl-name">${escapeHtml(a.name)}</span><span class="pl-unit">${fmtFCFA(p)} × ${l.qty}</span></div>
+      <div class="pl-qty"><button type="button" data-dec="${l.id}" aria-label="Retirer un ${escapeHtml(a.name)}">−</button><span>${l.qty}</span><button type="button" data-inc="${l.id}" aria-label="Ajouter un ${escapeHtml(a.name)}">+</button></div>
+      <span class="pl-total">${fmtFCFA(p * l.qty)}</span>
+    </div>`;
+  }).join('') : '<div class="pos-empty">Cliquez sur un article pour l\'ajouter.<br>Astuce : tapez son nom puis Entrée.</div>';
+  const units = posCart.reduce((s, l) => s + l.qty, 0);
+  const total = posTotal();
+  document.getElementById('posCount').textContent = `${units} article${units > 1 ? 's' : ''}`;
+  document.getElementById('posTotal').textContent = fmtFCFA(total);
+
+  // Paiement
+  document.getElementById('posMethods').innerHTML = POS_METHODS.map(([k, l]) =>
+    `<button type="button" role="radio" aria-checked="${k === posMethod}" class="pos-pay${k === posMethod ? ' on' : ''}" data-pay="${k}">${l}</button>`).join('');
+  const creditWarn = document.getElementById('posCreditWarn');
+  creditWarn.hidden = !(posMethod === 'credit' && !posCustomer);
+  const pay = document.getElementById('posPayBtn');
+  pay.disabled = !posCart.length || posBusy || (posMethod === 'credit' && !posCustomer);
+  pay.textContent = posBusy ? 'Enregistrement…' : posCart.length ? `Encaisser ${fmtFCFA(total)}` : 'Encaisser';
+  document.getElementById('posClearBtn').disabled = !posCart.length;
+  document.getElementById('posQuoteBtn').disabled = !posCart.length;
+  document.getElementById('posInvoiceBtn').disabled = !posCart.length;
+  document.getElementById('posQuoteBtn').hidden = !canManageInvoices() && !['vendeur'].includes(currentProfile?.role);
+  document.getElementById('posInvoiceBtn').hidden = document.getElementById('posQuoteBtn').hidden;
+  document.getElementById('posReceipt').hidden = !posLastSale;
+}
+
+async function posCheckout() {
+  if (!posCart.length || posBusy) return;
+  const credit = posMethod === 'credit';
+  if (credit && !posCustomer) { toast('Choisissez le client pour une vente à crédit.'); return; }
+  if (credit && !navigator.onLine) { toast('Vente à crédit impossible hors-ligne.'); return; }
+  posBusy = true; renderPos();
+  const done = [];
+  let queued = false;
+  const snapshot = posCart.map(l => ({ ...l, name: articles[l.id].name, price: Number(articles[l.id].sell_price) || 0 }));
+  try {
+    for (const l of snapshot) {
+      if (credit) await recordMovement(l.id, 'vente', l.qty, posCustomer, true, null);
+      else queued = (await recordMovementTolerant(l.id, 'vente', l.qty, posCustomer || null, posMethod)) || queued;
+      done.push(l);
+    }
+  } catch (err) {
+    console.error(err);
+    posCart = posCart.filter(l => !done.some(d => d.id === l.id));
+    posBusy = false; renderPos();
+    const failed = snapshot[done.length];
+    toast(`Erreur sur « ${failed?.name} » : ${err.message || 'enregistrement impossible'}${done.length ? ` — ${done.length} ligne(s) déjà encaissée(s), retirée(s) du panier` : ''}`);
+    return;
+  }
+  const total = snapshot.reduce((s, l) => s + l.qty * l.price, 0);
+  posLastSale = { lines: snapshot, total, method: posMethod, customer: posCustomer ? customers[posCustomer]?.name : '', at: new Date() };
+  posCart = []; posCustomer = ''; posMethod = 'especes'; posBusy = false; posQuery = '';
+  document.getElementById('posSearch').value = '';
+  renderPos();
+  toast(`Vente encaissée : ${fmtFCFA(total)}${queued ? ' (hors-ligne, sera synchronisée)' : ''}`);
+  if (typeof loadDashboardStats === 'function') dashReportAt = 0;
+  document.getElementById('posSearch').focus();
+}
+
+function posToDocument(docType) {
+  if (!posCart.length) return;
+  const prefill = {
+    customer_id: posCustomer || null,
+    lines: posCart.map(l => ({ article_id: l.id, description: articles[l.id].name, qty: l.qty, unit_price_ttc: Number(articles[l.id].sell_price) || 0 })),
+  };
+  openDocumentEditor(docType, null, prefill);
+}
+
+function printPosReceipt() {
+  const r = posLastSale;
+  if (!r) return;
+  const s = shopInfo || {};
+  const label = r.method === 'credit' ? 'À crédit' : (PAY_METHODS[r.method] || r.method);
+  document.getElementById('printArea').innerHTML = `<div class="pdoc pticket">
+    <h1 style="font-size:13pt; margin:0 0 2px">${escapeHtml(s.legal_name || s.name || 'Boutique')}</h1>
+    <div>${escapeHtml(s.address || '')}</div><div>${[s.phone].filter(Boolean).map(escapeHtml).join('')}</div>
+    <div style="margin:8px 0">${r.at.toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}${r.customer ? ' · ' + escapeHtml(r.customer) : ''}</div>
+    <table><tbody>${r.lines.map(l => `<tr><td>${escapeHtml(l.name)}<br><span style="color:#555">${l.qty} × ${fmtFCFA(l.price)}</span></td><td class="n">${fmtFCFA(l.qty * l.price)}</td></tr>`).join('')}</tbody></table>
+    <div class="ptotals" style="width:100%"><div class="grand"><span>TOTAL</span><span>${fmtFCFA(r.total)}</span></div><div><span>Paiement</span><span>${escapeHtml(label)}</span></div></div>
+    <div class="plegal">Reçu de caisse — ne vaut pas facture. Merci de votre visite !</div>
+  </div>`;
+  setTimeout(() => window.print(), 50);
+}
+
+(function initPos() {
+  const tab = document.getElementById('tab-caisse');
+  tab.addEventListener('click', e => {
+    const t = e.target.closest('button');
+    if (!t) return;
+    if (t.dataset.add) { if (t.getAttribute('aria-disabled') !== 'true') posAdd(t.dataset.add, 1); else toast('Article épuisé.'); }
+    else if (t.dataset.inc) posAdd(t.dataset.inc, 1);
+    else if (t.dataset.dec) posAdd(t.dataset.dec, -1);
+    else if (t.dataset.cat !== undefined && t.classList.contains('pos-chip')) { posCategory = t.dataset.cat; renderPos(); }
+    else if (t.dataset.pay) { posMethod = t.dataset.pay; renderPos(); }
+  });
+  const search = document.getElementById('posSearch');
+  search.addEventListener('input', () => { posQuery = search.value; renderPos(); });
+  search.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const first = posArticles().find(([, a]) => (Number(a.qty) || 0) > 0);
+      if (first) { posAdd(first[0], 1); search.select(); }
+    } else if (e.key === 'Escape') { search.value = ''; posQuery = ''; renderPos(); }
+  });
+  document.getElementById('posCustomer').addEventListener('change', e => { posCustomer = e.target.value; renderPos(); });
+  document.getElementById('posClearBtn').addEventListener('click', () => { posCart = []; renderPos(); });
+  document.getElementById('posPayBtn').addEventListener('click', posCheckout);
+  document.getElementById('posQuoteBtn').addEventListener('click', () => posToDocument('devis'));
+  document.getElementById('posInvoiceBtn').addEventListener('click', () => posToDocument('facture'));
+  document.getElementById('posReceiptBtn').addEventListener('click', printPosReceipt);
+})();
+
+// ---------------------------------------------------------------------------
 // Retours & remboursements (module 5)
 // ---------------------------------------------------------------------------
 const RETURN_REASONS = {
@@ -4579,7 +4858,7 @@ document.getElementById('tab-dashboard').addEventListener('click', e => {
   const b = e.target.closest('[data-goto]');
   if (b) goToTab(b.dataset.goto);
 });
-document.getElementById('newSaleBtn').addEventListener('click', () => openMoveSheet(null));
+document.getElementById('newSaleBtn').addEventListener('click', () => goToTab('caisse'));
 
 function applyRoleToUI() {
   const gerant = isGerant();
@@ -4595,7 +4874,7 @@ function applyRoleToUI() {
   // Le livreur n'a que l'onglet Livraisons (ses livraisons)
   document.querySelectorAll('.tab-btn[data-tab]').forEach(b => {
     if (livreur) b.hidden = b.dataset.tab !== 'livraisons';
-    else if (b.dataset.tab === 'dashboard' || b.dataset.tab === 'stock' || b.dataset.tab === 'historique' || b.dataset.tab === 'clients') b.hidden = false;
+    else if (b.dataset.tab === 'dashboard' || b.dataset.tab === 'caisse' || b.dataset.tab === 'stock' || b.dataset.tab === 'historique' || b.dataset.tab === 'clients') b.hidden = false;
   });
   document.getElementById('newDeliveryBtn').hidden = livreur;
   if (livreur) document.getElementById('delFilter').value = 'actives';
@@ -4603,6 +4882,7 @@ function applyRoleToUI() {
   const currentBtn = document.querySelector(`.tab-btn[data-tab="${currentTab}"]`);
   if (!currentBtn || currentBtn.hidden) goToTab(livreur ? 'livraisons' : 'stock');
   document.getElementById('newSaleBtn').hidden = livreur;
+  renderPos();
   updateNavGroups();
   updateSidebarShop();
   const label = ROLE_LABELS[currentProfile.role] || (gerant ? 'Gérant' : 'Vendeur');
@@ -5334,6 +5614,7 @@ function showLogin() {
   document.getElementById('fixedPanel-livraisons').hidden = true;
   document.getElementById('fixedPanel-tresorerie').hidden = true;
   document.getElementById('fixedPanel-rapports').hidden = true;
+  document.getElementById('fixedPanel-caisse').hidden = true;
   document.getElementById('fixedPanel-articles').hidden = true;
   document.getElementById('offlineStatus').hidden = true;
   document.getElementById('pendingBadge').hidden = true;
@@ -5362,6 +5643,7 @@ function showSignup() {
   document.getElementById('fixedPanel-livraisons').hidden = true;
   document.getElementById('fixedPanel-tresorerie').hidden = true;
   document.getElementById('fixedPanel-rapports').hidden = true;
+  document.getElementById('fixedPanel-caisse').hidden = true;
   document.getElementById('fixedPanel-articles').hidden = true;
   document.getElementById('offlineStatus').hidden = true;
   document.getElementById('pendingBadge').hidden = true;
@@ -5671,7 +5953,7 @@ function showApp() {
   document.getElementById('logoutBtn').hidden = false;
   document.getElementById('changePasswordBtn').hidden = false;
   document.querySelector('.app-fixed-top nav.tabs').hidden = false;
-  ['dashboard', 'stock', 'historique', 'clients', 'ventes', 'achats', 'livraisons', 'tresorerie', 'rapports', 'articles'].forEach(t => {
+  ['dashboard', 'caisse', 'stock', 'historique', 'clients', 'ventes', 'achats', 'livraisons', 'tresorerie', 'rapports', 'articles'].forEach(t => {
     document.getElementById('fixedPanel-' + t).hidden = (t !== currentTab);
   });
   document.getElementById('fixedTop').hidden = false;
