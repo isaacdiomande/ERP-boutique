@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="fr">
+<html lang="fr" data-theme="light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -69,20 +69,21 @@
 }
 
 :root {
-  --bg: #f3f5f2;
+  /* Palette de la maquette validée (12 nov. 2026) — thème clair uniquement */
+  --bg: #f3f5f3;
   --surface: #ffffff;
-  --surface-sunken: #e9ede8;
-  --border: #d7ddd4;
-  --ink: #1c231e;
-  --ink-dim: #5e6b60;
+  --surface-sunken: #eef3f0;
+  --border: #e1e7e2;
+  --ink: #1b2420;
+  --ink-dim: #56655c;
   --accent: #3c7a52;
   --accent-ink: #ffffff;
-  --good: #2f7a4f;
-  --good-bg: #e7f2ea;
-  --warn: #a8651a;
-  --warn-bg: #faf0e2;
-  --bad: #b23b3b;
-  --bad-bg: #fbeaea;
+  --good: #2f6343;
+  --good-bg: #e6f1ea;
+  --warn: #7a4d00;
+  --warn-bg: #fdf3dc;
+  --bad: #a3261c;
+  --bad-bg: #fbeceb;
   --font-display: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-body: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', monospace;
@@ -203,8 +204,9 @@ nav.tabs button.active .nav-badge { background: rgba(0,0,0,0.2); color: #fff; }
 .dash-axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.7rem; color: var(--ink-dim); }
 .todo-item { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 8px 12px; border-radius: 10px; border: none; width: 100%; font: inherit; font-size: 0.88rem; color: var(--ink); cursor: pointer; text-align: left; background: var(--surface-sunken); }
 .todo-item .t-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--accent); }
+.todo-item:not(.bad):not(.warn) { background: #eef3f0; }
 .todo-item.bad { background: var(--bad-bg); } .todo-item.bad .t-dot { background: var(--bad); }
-.todo-item.warn { background: var(--warn-bg); } .todo-item.warn .t-dot { background: var(--warn); }
+.todo-item.warn { background: var(--warn-bg); } .todo-item.warn .t-dot { background: #9a6200; }
 .todo-item .t-label { flex: 1; }
 .todo-item .t-val { font-family: var(--font-mono); font-weight: 600; font-size: 0.85rem; white-space: nowrap; }
 .dash-table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
@@ -226,7 +228,7 @@ section[hidden] { display: none !important; }
 .logout-link-top { background: none; border: 1px solid var(--border); color: var(--ink-dim); font-size: 0.72rem; cursor: pointer; padding: 4px 9px; border-radius: 8px; }
 
 .tiles { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; }
-.tile { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 10px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.tile { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 12px 10px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .tile .label { font-size: 0.68rem; color: var(--ink-dim); letter-spacing: 0.02em; text-transform: uppercase; }
 .tile .value { font-size: 1.15rem; font-weight: 700; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 .tile .value.small { font-size: 0.95rem; }
@@ -388,7 +390,7 @@ form { display: flex; flex-direction: column; gap: 14px; }
 .tile .delta.up { color: var(--good); }
 .tile .delta.down { color: var(--bad); }
 .tile .delta.flat { color: var(--ink-dim); }
-:root { --chart-ca: #a9d3b8; --chart-margin: #3c7a52; }
+:root { --chart-ca: #b9dcc6; --chart-margin: #3c7a52; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --chart-ca: #2f5b40; --chart-margin: #6bb886; } }
 :root[data-theme="dark"] { --chart-ca: #2f5b40; --chart-margin: #6bb886; }
 .report-chart { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin: 4px 0 10px; }
