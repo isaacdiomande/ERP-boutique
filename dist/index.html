@@ -181,6 +181,31 @@ nav.tabs button.active .nav-badge { background: rgba(0,0,0,0.2); color: #fff; }
 .topbar-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
 .top-cta { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 18px; width: auto; }
 
+/* Liste + détail */
+.split { display: block; }
+.split-pane { display: none; }
+@media (min-width: 1100px) {
+  .split { display: grid; grid-template-columns: minmax(320px, 400px) minmax(0, 1fr); gap: 18px; align-items: start; }
+  .split-list { gap: 0 !important; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+  .split-list .article-row { border: none; border-radius: 0; border-bottom: 1px solid #edf1ee; margin: 0; cursor: pointer; }
+  .split-list .article-row:last-child { border-bottom: none; }
+  .split-list .article-row:hover { background: #f7faf8; }
+  .split-list .article-row.selected { background: #eaf4ee; box-shadow: inset 3px 0 0 var(--accent); }
+  .split-list .empty-state { border: none; }
+  .split-pane { display: block; position: sticky; top: 104px; max-height: calc(100vh - 124px); overflow-y: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; }
+  .pane-empty { padding: 60px 24px; text-align: center; color: var(--ink-dim); font-size: 0.9rem; }
+  .sheet-backdrop.in-pane { position: static; inset: auto; background: none; display: block; padding: 0; z-index: auto; }
+  .sheet-backdrop.in-pane .sheet { width: 100%; max-height: none; overflow: visible; border-radius: 14px; box-shadow: none; background: var(--surface); padding: 22px 26px; }
+  .sheet-backdrop.in-pane .sheet-head h2 { font-size: 1.35rem; font-weight: 700; }
+  .sheet-backdrop.in-pane .sheet > div[style*="flex-direction:column"] { flex-direction: row !important; flex-wrap: wrap; }
+  .sheet-backdrop.in-pane .sheet > div[style*="flex-direction:column"] > .btn-block { width: auto; flex: 0 0 auto; padding-inline: 16px; }
+}
+.toolbar-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.toolbar-row .btn { min-height: 42px; }
+.doc-tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border); overflow-x: auto; }
+.doc-tabs button { height: 40px; padding: 0 12px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--ink-dim); font-size: 0.88rem; cursor: pointer; white-space: nowrap; }
+.doc-tabs button.on { border-bottom-color: var(--accent); color: var(--ink); font-weight: 600; }
+
 /* Caisse */
 #tab-caisse:not([hidden]) { display: block; }
 .pos { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 18px; align-items: start; }
@@ -312,7 +337,9 @@ section[hidden] { display: none !important; }
 
 .btn { border: none; border-radius: 10px; padding: 11px 16px; font-weight: 600; font-size: 0.9rem; cursor: pointer; text-align: center; }
 .btn-primary { background: var(--accent); color: var(--accent-ink); }
-.btn-ghost { background: var(--surface-sunken); color: var(--ink); }
+.btn-ghost { background: var(--surface); color: var(--ink); border: 1px solid #dde4df; }
+.btn-ghost:hover { background: #f7faf8; }
+.btn-primary:hover { background: #33694a; }
 .btn-block { width: 100%; }
 .btn[disabled] { opacity: 0.5; cursor: default; }
 .fab {
@@ -570,14 +597,24 @@ form { display: flex; flex-direction: column; gap: 14px; }
   </div>
 
   <div class="fixed-tab-panel" id="fixedPanel-ventes" hidden>
-    <div class="btn-row">
+    <div class="toolbar-row">
+      <button class="btn btn-primary" id="newInvoiceBtn">+ Nouvelle facture</button>
       <button class="btn btn-ghost" id="newQuoteBtn">+ Nouveau devis</button>
-      <button class="btn btn-ghost" id="newInvoiceBtn">+ Nouvelle facture</button>
+      <button class="btn btn-ghost" id="newReturnBtn">↩ Retour comptoir</button>
+      <span style="flex:1"></span>
+      <button class="btn btn-ghost" id="shopSettingsBtn" hidden>⚙ Infos boutique</button>
     </div>
-    <button class="btn btn-ghost btn-block" id="newReturnBtn">↩ Nouveau retour (vente au comptoir)</button>
+    <div class="doc-tabs" id="docTabs" role="tablist" aria-label="Filtrer les documents">
+      <button type="button" role="tab" data-f="">Tous</button>
+      <button type="button" role="tab" data-f="impayees">À encaisser</button>
+      <button type="button" role="tab" data-f="facture">Factures</button>
+      <button type="button" role="tab" data-f="devis">Devis</button>
+      <button type="button" role="tab" data-f="brouillons">Brouillons</button>
+      <button type="button" role="tab" data-f="retours">Retours</button>
+    </div>
     <div class="searchbar">
-      <input type="search" id="docSearchInput" placeholder="N°, client…">
-      <select id="docFilter">
+      <input type="search" id="docSearchInput" placeholder="N°, client, n° FNE…">
+      <select id="docFilter" hidden>
         <option value="">Tous</option>
         <option value="devis">Devis</option>
         <option value="facture">Factures</option>
@@ -586,7 +623,6 @@ form { display: flex; flex-direction: column; gap: 14px; }
         <option value="retours">Retours</option>
       </select>
     </div>
-    <button class="btn btn-ghost btn-block" id="shopSettingsBtn" hidden>⚙ Infos boutique (en-tête des documents)</button>
   </div>
 
   <div class="fixed-tab-panel" id="fixedPanel-achats" hidden>
@@ -799,19 +835,31 @@ form { display: flex; flex-direction: column; gap: 14px; }
   </section>
 
   <section id="tab-clients" hidden>
-    <div class="article-list" id="customerList"></div>
+    <div class="split">
+      <div class="article-list split-list" id="customerList"></div>
+      <div class="split-pane" id="custPane"><div class="pane-empty">Sélectionnez un client pour voir sa fiche.</div></div>
+    </div>
   </section>
 
   <section id="tab-ventes" hidden>
-    <div class="article-list" id="docList"></div>
+    <div class="split">
+      <div class="article-list split-list" id="docList"></div>
+      <div class="split-pane" id="docPane"><div class="pane-empty">Sélectionnez un devis, une facture ou un retour pour voir son détail.</div></div>
+    </div>
   </section>
 
   <section id="tab-achats" hidden>
-    <div class="article-list" id="poList"></div>
+    <div class="split">
+      <div class="article-list split-list" id="poList"></div>
+      <div class="split-pane" id="poPane"><div class="pane-empty">Sélectionnez un bon de commande pour voir son détail.</div></div>
+    </div>
   </section>
 
   <section id="tab-livraisons" hidden>
-    <div class="article-list" id="deliveryList"></div>
+    <div class="split">
+      <div class="article-list split-list" id="deliveryList"></div>
+      <div class="split-pane" id="delPane"><div class="pane-empty">Sélectionnez une livraison pour voir son détail.</div></div>
+    </div>
   </section>
 
   <section id="tab-tresorerie" hidden>
@@ -979,6 +1027,13 @@ document.querySelectorAll('.tab-btn[data-tab]').forEach(btn => {
     currentTab = btn.dataset.tab;
     document.getElementById('pageTitle').textContent = btn.dataset.title || btn.textContent.trim();
     if (currentTab === 'dashboard') loadDashboardStats();
+    if (['ventes', 'achats', 'livraisons', 'clients'].includes(currentTab)) {
+      const paneId = { ventes: 'docPane', achats: 'poPane', livraisons: 'delPane', clients: 'custPane' }[currentTab];
+      setTimeout(() => {
+        const pane = document.getElementById(paneId);
+        if (paneUsable(paneId) && !pane.dataset.current) document.querySelector(`#${DETAIL_PANES[paneId].list} .article-row`)?.click();
+      }, 0);
+    }
     if (currentTab === 'caisse') { renderPos(); setTimeout(() => document.getElementById('posSearch')?.focus(), 0); }
     ['dashboard', 'caisse', 'stock', 'historique', 'clients', 'ventes', 'achats', 'livraisons', 'tresorerie', 'rapports', 'articles'].forEach(t => {
       document.getElementById('tab-' + t).hidden = (t !== currentTab);
@@ -1140,6 +1195,9 @@ function renderAll() {
 // Clients (module 3 — fiche, compte crédit, historique)
 // ---------------------------------------------------------------------------
 function renderCustomers() {
+  try { return renderCustomersInner(); } finally { refreshPane('custPane'); }
+}
+function renderCustomersInner() {
   const host = document.getElementById('customerList');
   if (!host) return;
   const search = (document.getElementById('customerSearchInput')?.value || '').trim().toLowerCase();
@@ -1221,7 +1279,7 @@ function openCustomerSheet(id) {
       ` : ''}
     </div>
   `;
-  document.body.appendChild(backdrop);
+  if (id) mountDetail(backdrop, 'custPane', id, () => openCustomerSheet(id)); else document.body.appendChild(backdrop);
   backdrop.addEventListener('click', (e) => { if (e.target === backdrop) backdrop.remove(); });
   document.getElementById('closeCustSheet').addEventListener('click', () => backdrop.remove());
 
@@ -1457,6 +1515,9 @@ async function loadSalesDocuments() {
 }
 
 function renderSalesDocs() {
+  try { return renderSalesDocsInner(); } finally { refreshPane('docPane'); }
+}
+function renderSalesDocsInner() {
   const host = document.getElementById('docList');
   if (!host) return;
   const filter = document.getElementById('docFilter')?.value || '';
@@ -1775,7 +1836,7 @@ function openDocumentView(id) {
         ${actions.map(([key, label, kind]) => `<button type="button" class="btn btn-${kind} btn-block" data-action="${key}">${label}</button>`).join('')}
       </div>
     </div>`;
-  document.body.appendChild(backdrop);
+  mountDetail(backdrop, 'docPane', 'doc:' + id, () => openDocumentView(id));
   const close = () => backdrop.remove();
   backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(); });
   backdrop.querySelector('.sheet-close').addEventListener('click', close);
@@ -2070,6 +2131,9 @@ async function loadPurchasing() {
 }
 
 function renderPurchasing() {
+  try { return renderPurchasingInner(); } finally { refreshPane('poPane'); }
+}
+function renderPurchasingInner() {
   const host = document.getElementById('poList');
   if (!host) return;
   const all = Object.values(purchaseOrders);
@@ -2364,7 +2428,7 @@ function openPurchaseOrderView(id) {
         ${actions.map(([k, l, kind]) => `<button type="button" class="btn btn-${kind} btn-block" data-action="${k}">${l}</button>`).join('')}
       </div>
     </div>`;
-  document.body.appendChild(backdrop);
+  mountDetail(backdrop, 'poPane', id, () => openPurchaseOrderView(id));
   const close = () => backdrop.remove();
   backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(); });
   backdrop.querySelector('.sheet-close').addEventListener('click', close);
@@ -2578,6 +2642,9 @@ async function loadDeliveries() {
 }
 
 function renderDeliveries() {
+  try { return renderDeliveriesInner(); } finally { refreshPane('delPane'); }
+}
+function renderDeliveriesInner() {
   const host = document.getElementById('deliveryList');
   if (!host) return;
   const all = Object.values(deliveriesMap);
@@ -2784,7 +2851,7 @@ function openDeliveryView(id) {
         ${actions.map(([k, l, kind]) => `<button type="button" class="btn btn-${kind} btn-block" data-action="${k}">${l}</button>`).join('')}
       </div>
     </div>`;
-  document.body.appendChild(backdrop);
+  mountDetail(backdrop, 'delPane', id, () => openDeliveryView(id));
   const close = () => backdrop.remove();
   backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(); });
   backdrop.querySelector('.sheet-close').addEventListener('click', close);
@@ -4307,6 +4374,82 @@ function printPosReceipt() {
 })();
 
 // ---------------------------------------------------------------------------
+// Écrans « liste + détail » (refonte, étape 3). Sur un écran large, le détail
+// d'un document s'affiche à droite de la liste au lieu d'une fenêtre ; les
+// formulaires d'action (paiement, émission…) restent des fenêtres.
+// ---------------------------------------------------------------------------
+const DETAIL_PANES = {
+  docPane: { list: 'docList', empty: 'Sélectionnez un devis, une facture ou un retour pour voir son détail.', refresh: true },
+  poPane: { list: 'poList', empty: 'Sélectionnez un bon de commande pour voir son détail.', refresh: true },
+  delPane: { list: 'deliveryList', empty: 'Sélectionnez une livraison pour voir son détail.', refresh: true },
+  custPane: { list: 'customerList', empty: 'Sélectionnez un client pour voir sa fiche.', refresh: false },
+};
+const splitMedia = window.matchMedia('(min-width: 1100px)');
+function paneUsable(paneId) {
+  const p = document.getElementById(paneId);
+  return !!p && splitMedia.matches && !p.closest('section[hidden]');
+}
+function rowKey(r) {
+  return r.dataset.po || r.dataset.del || (r.dataset.kind ? r.dataset.kind + ':' + r.dataset.id : r.dataset.id) || '';
+}
+function highlightPane(paneId) {
+  const cfg = DETAIL_PANES[paneId];
+  const pane = document.getElementById(paneId);
+  const list = document.getElementById(cfg.list);
+  if (!pane || !list) return;
+  const cur = pane.dataset.current || '';
+  list.querySelectorAll('.article-row').forEach(r => r.classList.toggle('selected', !!cur && rowKey(r) === cur));
+}
+function mountDetail(backdrop, paneId, key, reopen) {
+  if (!paneUsable(paneId)) { document.body.appendChild(backdrop); return; }
+  const pane = document.getElementById(paneId);
+  pane.querySelectorAll(':scope > .sheet-backdrop').forEach(n => Element.prototype.remove.call(n));
+  backdrop.classList.add('in-pane');
+  // Dans le panneau, le détail reste affiché pendant une action (paiement,
+  // retour…) : seul le bouton ✕ le ferme vraiment.
+  backdrop.remove = function () { if (this._allowRemove) Element.prototype.remove.call(this); };
+  backdrop.querySelector('.sheet-close')?.addEventListener('click', () => { backdrop._allowRemove = true; }, true);
+  pane.appendChild(backdrop);
+  pane.dataset.current = key;
+  pane._reopen = reopen;
+  pane.querySelector('.pane-empty').hidden = true;
+  pane.scrollTop = 0;
+  highlightPane(paneId);
+}
+function refreshPane(paneId) {
+  const pane = document.getElementById(paneId);
+  if (!pane) return;
+  highlightPane(paneId);
+  if (!DETAIL_PANES[paneId].refresh || !pane.dataset.current || !pane._reopen) return;
+  if (pane.contains(document.activeElement) && /INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)) return;
+  if (document.querySelector('body > .sheet-backdrop')) return;   // une fenêtre d'action est ouverte
+  const reopen = pane._reopen;
+  pane.querySelectorAll(':scope > .sheet-backdrop').forEach(n => Element.prototype.remove.call(n));
+  reopen();
+}
+Object.keys(DETAIL_PANES).forEach(paneId => {
+  const pane = document.getElementById(paneId);
+  if (!pane) return;
+  new MutationObserver(() => {
+    if (!pane.querySelector(':scope > .sheet-backdrop')) {
+      pane.dataset.current = '';
+      pane._reopen = null;
+      pane.querySelector('.pane-empty').hidden = false;
+      highlightPane(paneId);
+    }
+  }).observe(pane, { childList: true });
+});
+
+document.getElementById('docTabs').addEventListener('click', e => {
+  const b = e.target.closest('button[data-f]');
+  if (!b) return;
+  document.getElementById('docFilter').value = b.dataset.f;
+  document.querySelectorAll('#docTabs button').forEach(x => x.classList.toggle('on', x === b));
+  renderSalesDocs();
+});
+document.querySelector('#docTabs button[data-f=""]').classList.add('on');
+
+// ---------------------------------------------------------------------------
 // Retours & remboursements (module 5)
 // ---------------------------------------------------------------------------
 const RETURN_REASONS = {
@@ -4627,7 +4770,7 @@ function openReturnView(id) {
         ${canManageInvoices() && r.refund_type !== 'aucun' ? `<button type="button" class="btn btn-ghost btn-block" data-action="fne">${r.fne_number ? 'Modifier le n° d\'avoir FNE' : 'Renseigner le n° d\'avoir FNE'}</button>` : ''}
       </div>
     </div>`;
-  document.body.appendChild(backdrop);
+  mountDetail(backdrop, 'docPane', 'ret:' + id, () => openReturnView(id));
   const close = () => backdrop.remove();
   backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(); });
   backdrop.querySelector('.sheet-close').addEventListener('click', close);
