@@ -5817,7 +5817,9 @@ function showLogin() {
   document.getElementById('fixedPanel-articles').hidden = true;
   document.getElementById('offlineStatus').hidden = true;
   document.getElementById('pendingBadge').hidden = true;
-  document.getElementById('fixedTop').hidden = false;
+  // Écrans de connexion / inscription : pas de menu latéral ni d'en-tête
+  document.getElementById('fixedTop').hidden = true;
+  document.body.classList.remove('nav-open');
 }
 
 function showSignup() {
@@ -5846,7 +5848,9 @@ function showSignup() {
   document.getElementById('fixedPanel-articles').hidden = true;
   document.getElementById('offlineStatus').hidden = true;
   document.getElementById('pendingBadge').hidden = true;
-  document.getElementById('fixedTop').hidden = false;
+  // Écrans de connexion / inscription : pas de menu latéral ni d'en-tête
+  document.getElementById('fixedTop').hidden = true;
+  document.body.classList.remove('nav-open');
 }
 
 document.getElementById('showSignupBtn').addEventListener('click', showSignup);
