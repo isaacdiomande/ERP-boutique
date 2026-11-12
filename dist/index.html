@@ -143,6 +143,83 @@ nav.tabs button {
 nav.tabs button.active { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,0.08); }
 .fixed-tab-panel { display: flex; flex-direction: column; gap: 10px; padding-bottom: 12px; }
 
+/* ---- Cadre « menu latéral » (refonte nov. 2026) ---- */
+:root { --sb-w: 240px; --sb-bg: #16261d; --sb-ink: #d9e6dd; --sb-dim: #8aa393; --sb-line: #2c4535; --sb-active: #3c7a52; }
+.sidebar { position: fixed; top: 0; left: 0; bottom: 0; width: var(--sb-w); background: var(--sb-bg); color: var(--sb-ink);
+  display: flex; flex-direction: column; padding: 18px 12px 14px; overflow-y: auto; z-index: 25; }
+body:has(#fixedTop:not([hidden])) { padding-left: calc(var(--sb-w) + 28px); padding-right: 28px; }
+body:has(#fixedTop:not([hidden])) .app-fixed-top { margin-inline: -28px; padding-inline: 28px; }
+.sb-brand { display: flex; align-items: center; gap: 10px; padding: 2px 8px 14px; }
+.sb-logo { width: 36px; height: 36px; border-radius: 10px; background: var(--sb-active); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.95rem; flex: none; }
+.sb-shop { display: flex; flex-direction: column; min-width: 0; }
+.sb-shop strong { color: #fff; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sb-shop span { color: #9fb5a6; font-size: 0.75rem; }
+nav.tabs { display: flex; flex-direction: column; gap: 2px; padding: 0; background: none; border-radius: 0; margin: 0; }
+.nav-group { display: flex; flex-direction: column; gap: 2px; }
+.nav-group-label { font-size: 0.66rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--sb-dim); padding: 12px 10px 4px; }
+nav.tabs button { flex: none; display: flex; align-items: center; gap: 10px; text-align: left; min-height: 40px; padding: 0 10px;
+  border: none; border-radius: 9px; background: transparent; color: var(--sb-ink); font-size: 0.88rem; font-weight: 500; cursor: pointer; }
+nav.tabs button span:first-of-type { flex: 1; }
+nav.tabs button:hover { background: rgba(255,255,255,0.07); }
+nav.tabs button.active { background: var(--sb-active); color: #fff; font-weight: 600; box-shadow: none; }
+nav.tabs button:focus-visible { outline: 2px solid #9fd3b2; outline-offset: 1px; }
+.nav-ic { flex: none; }
+.nav-badge { font-family: var(--font-mono); font-size: 0.68rem; background: var(--sb-line); color: var(--sb-ink); border-radius: 999px; padding: 1px 7px; }
+nav.tabs button.active .nav-badge { background: rgba(0,0,0,0.2); color: #fff; }
+.sb-spacer { flex: 1; min-height: 12px; }
+.sb-user { border-top: 1px solid var(--sb-line); padding: 12px 6px 0; display: flex; flex-direction: column; gap: 8px; align-items: stretch; color: var(--sb-ink); font-size: 0.8rem; }
+.sb-user-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.sb-user-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.sb-user .logout-link-top { border-color: var(--sb-line); color: var(--sb-ink); }
+.sb-user .logout-link-top:hover { background: rgba(255,255,255,0.07); }
+.sb-user .role-badge { margin-left: 2px; }
+.topbar { padding-block: 18px 14px; flex-wrap: wrap; }
+.topbar .brand { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.topbar .brand h1 { font-size: 1.55rem; font-weight: 700; letter-spacing: -0.01em; }
+.page-sub { font-size: 0.85rem; color: var(--ink-dim); }
+.topbar-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+.top-cta { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 18px; width: auto; }
+
+/* Tableau de bord */
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+.kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.kpi .k-label { font-size: 0.8rem; color: var(--ink-dim); }
+.kpi .k-value { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 1.45rem; font-weight: 600; letter-spacing: -0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kpi .k-sub { font-size: 0.76rem; color: var(--ink-dim); }
+.kpi .k-sub.up { color: var(--good); font-weight: 600; }
+.kpi .k-sub.down { color: var(--bad); font-weight: 600; }
+#tab-dashboard:not([hidden]) { display: flex; flex-direction: column; gap: 14px; }
+.dash-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr); gap: 14px; align-items: start; }
+@media (max-width: 1100px) { .dash-grid { grid-template-columns: minmax(0, 1fr); } }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.card-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.card-head h3 { font-size: 1rem; flex: 1; }
+.card-link { background: none; border: none; color: var(--accent); font-weight: 600; font-size: 0.82rem; cursor: pointer; padding: 4px; }
+.dash-bars { display: flex; align-items: flex-end; gap: 6px; height: 180px; border-bottom: 1px solid var(--border); padding-top: 6px; }
+.dash-bar { flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; }
+.dash-bar .ca { background: var(--chart-ca); border-radius: 5px 5px 0 0; display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden; min-height: 2px; }
+.dash-bar .mg { background: var(--chart-margin); }
+.dash-bar.today .ca { outline: 2px solid var(--chart-margin); outline-offset: 1px; }
+.dash-axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.7rem; color: var(--ink-dim); }
+.todo-item { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 8px 12px; border-radius: 10px; border: none; width: 100%; font: inherit; font-size: 0.88rem; color: var(--ink); cursor: pointer; text-align: left; background: var(--surface-sunken); }
+.todo-item .t-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--accent); }
+.todo-item.bad { background: var(--bad-bg); } .todo-item.bad .t-dot { background: var(--bad); }
+.todo-item.warn { background: var(--warn-bg); } .todo-item.warn .t-dot { background: var(--warn); }
+.todo-item .t-label { flex: 1; }
+.todo-item .t-val { font-family: var(--font-mono); font-weight: 600; font-size: 0.85rem; white-space: nowrap; }
+.dash-table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+.dash-table th { text-align: left; font-weight: 500; font-size: 0.72rem; color: var(--ink-dim); padding: 6px; }
+.dash-table td { padding: 9px 6px; border-top: 1px solid var(--border); }
+.dash-table .n { text-align: right; font-family: var(--font-mono); font-weight: 600; white-space: nowrap; }
+.dash-table .t { font-family: var(--font-mono); color: var(--ink-dim); white-space: nowrap; }
+.pay-chip { display: inline-block; font-size: 0.72rem; border-radius: 999px; padding: 2px 8px; background: var(--surface-sunken); color: var(--ink-dim); white-space: nowrap; }
+.pay-chip.especes { background: var(--good-bg); color: var(--good); }
+.pay-chip.credit { background: #f1ecf9; color: #5b3a8f; }
+.pay-chip.wave { background: #e3f0fb; color: #164e7a; }
+.pay-chip.orange_money { background: #fdecdc; color: #8a3d00; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .pay-chip.credit, :root:not([data-theme="light"]) .pay-chip.wave, :root:not([data-theme="light"]) .pay-chip.orange_money { background: var(--surface-sunken); color: var(--ink); } }
+
+
 main { flex: 1; display: flex; flex-direction: column; gap: 16px; padding-bottom: 24px; }
 section[hidden] { display: none !important; }
 [hidden] { display: none !important; }
@@ -209,6 +286,10 @@ form { display: flex; flex-direction: column; gap: 14px; }
 .sheet-head { display: flex; align-items: center; justify-content: space-between; }
 .sheet-head h2 { font-size: 1.05rem; }
 .sheet-close { background: none; border: none; color: var(--ink-dim); font-size: 1.3rem; cursor: pointer; padding: 4px 8px; }
+@media (min-width: 760px) {
+  .sheet-backdrop { align-items: center; justify-content: center; padding: 24px; }
+  .sheet { width: min(720px, 100%); max-height: calc(100vh - 48px); border-radius: 16px; padding: 22px 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.25); }
+}
 
 .history-list { display: flex; flex-direction: column; gap: 6px; }
 .history-row { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; display: flex; align-items: center; gap: 10px; }
@@ -352,36 +433,52 @@ form { display: flex; flex-direction: column; gap: 14px; }
 <body>
 
 <div class="app-fixed-top" id="fixedTop" hidden>
+  <aside class="sidebar" aria-label="Navigation principale">
+    <div class="sb-brand">
+      <div class="sb-logo" id="sbLogo" aria-hidden="true">B</div>
+      <div class="sb-shop"><strong id="sbShopName">Ma boutique</strong><span id="sbShopSub"></span></div>
+    </div>
+    <nav class="tabs">
+    <div class="nav-group"><div class="nav-group-label">Vendre</div>
+      <button class="tab-btn active" data-tab="dashboard" data-title="Tableau de bord"><svg class="nav-ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg><span>Tableau de bord</span><span class="nav-badge" id="navBadge-dashboard" hidden></span></button>
+      <button class="tab-btn" data-tab="ventes" data-title="Devis & factures" id="ventesTabBtn"><svg class="nav-ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8zM14 3v5h5M9 13h6M9 17h6"/></svg><span>Devis & factures</span><span class="nav-badge" id="navBadge-ventes" hidden></span></button>
+      <button class="tab-btn" data-tab="clients" data-title="Clients" id="clientsTabBtn"><svg class="nav-ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 20v-1a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v1M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 20v-1a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg><span>Clients</span><span class="nav-badge" id="navBadge-clients" hidden></span></button>
+      <button class="tab-btn" data-tab="livraisons" data-title="Livraisons" id="livraisonsTabBtn"><svg class="nav-ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h11v10H3zM14 9h4l3 3v4h-7M7 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4M17 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4"/></svg><span>Livraisons</span><span class="nav-badge" id="navBadge-livraisons" hidden></span></button>
+    </div>
+    <div class="nav-group"><div class="nav-group-label">Stock</div>
+      <button class="tab-btn" data-tab="stock" data-title="Stock"><svg class="nav-ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8l-9-5-9 5v8l9 5 9-5zM3 8l9 5 9-5M12 13v8"/></svg><span>Stock</span><span class="nav-badge" id="navBadge-stock" hidden></span></button>
+      <button class="tab-btn" data-tab="articles" data-title="Articles" id="articlesTabBtn"><svg class="nav-ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span>Articles</span><span class="nav-badge" id="navBadge-articles" hidden></span></button>
+      <button class="tab-btn" data-tab="historique" data-title="Historique"><svg class="nav-ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18M12 7v5l3 2"/></svg><span>Historique</span><span class="nav-badge" id="navBadge-historique" hidden></span></button>
+      <button class="tab-btn" data-tab="achats" data-title="Achats" id="achatsTabBtn" hidden><svg class="nav-ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 7h12l1 13H5zM9 7V5a3 3 0 0 1 6 0v2"/></svg><span>Achats</span><span class="nav-badge" id="navBadge-achats" hidden></span></button>
+    </div>
+    <div class="nav-group"><div class="nav-group-label">Gestion</div>
+      <button class="tab-btn" data-tab="tresorerie" data-title="Trésorerie" id="tresoTabBtn" hidden><svg class="nav-ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM3 7l12-3v3M16 13h2"/></svg><span>Trésorerie</span><span class="nav-badge" id="navBadge-tresorerie" hidden></span></button>
+      <button class="tab-btn" data-tab="rapports" data-title="Rapports & exports" id="reportsTabBtn" hidden><svg class="nav-ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span>Rapports & exports</span><span class="nav-badge" id="navBadge-rapports" hidden></span></button>
+      <button class="tab-btn sb-tool" id="teamBtn" hidden><svg class="nav-ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg><span>Équipe</span></button>
+      <button class="tab-btn sb-tool" id="securityBtn" hidden><svg class="nav-ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></svg><span>Sécurité</span></button>
+    </div>
+    </nav>
+    <div class="sb-spacer"></div>
+    <div class="sb-user who" id="whoBox">
+      <div class="sb-user-row"><span class="dot off" id="whoDot"></span><span id="whoLabel">Connexion…</span></div>
+      <div class="sb-user-actions">
+        <button class="logout-link-top" id="changePasswordBtn" hidden>Mot de passe</button>
+        <button class="logout-link-top" id="logoutBtn" hidden>Se déconnecter</button>
+      </div>
+    </div>
+  </aside>
   <div class="topbar">
-    <div class="brand"><h1>Boutique Stock</h1></div>
-    <div class="who" id="whoBox">
-      <span class="dot off" id="whoDot"></span>
-      <span id="whoLabel">Connexion…</span>
-      <button class="logout-link-top" id="teamBtn" hidden>Équipe</button>
-      <button class="logout-link-top" id="securityBtn" hidden>Sécurité</button>
-      <button class="logout-link-top" id="changePasswordBtn" hidden>Mot de passe</button>
-      <button class="logout-link-top" id="logoutBtn" hidden>Se déconnecter</button>
+    <div class="brand"><h1 id="pageTitle">Tableau de bord</h1><span class="page-sub" id="pageSub"></span></div>
+    <div class="topbar-actions">
+      <span class="status-pill offline-pill" id="offlineStatus" hidden>
+        <span class="dot off" id="offlineDot"></span>
+        <span id="offlineLabel">Hors-ligne</span>
+      </span>
+      <span class="status-pill pending-pill" id="pendingBadge" hidden></span>
+      <button type="button" class="btn btn-primary top-cta" id="newSaleBtn" hidden>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Nouvelle vente</button>
     </div>
   </div>
-  <div class="status-row">
-    <span class="status-pill offline-pill" id="offlineStatus" hidden>
-      <span class="dot off" id="offlineDot"></span>
-      <span id="offlineLabel">Hors-ligne</span>
-    </span>
-    <span class="status-pill pending-pill" id="pendingBadge" hidden></span>
-  </div>
-  <nav class="tabs">
-    <button class="tab-btn active" data-tab="dashboard">Tableau de bord</button>
-    <button class="tab-btn" data-tab="stock">Stock</button>
-    <button class="tab-btn" data-tab="historique">Historique</button>
-    <button class="tab-btn" data-tab="clients" id="clientsTabBtn">Clients</button>
-    <button class="tab-btn" data-tab="ventes" id="ventesTabBtn">Ventes</button>
-    <button class="tab-btn" data-tab="achats" id="achatsTabBtn" hidden>Achats</button>
-    <button class="tab-btn" data-tab="livraisons" id="livraisonsTabBtn">Livraisons</button>
-    <button class="tab-btn" data-tab="tresorerie" id="tresoTabBtn" hidden>Trésorerie</button>
-    <button class="tab-btn" data-tab="rapports" id="reportsTabBtn" hidden>Rapports</button>
-    <button class="tab-btn" data-tab="articles" id="articlesTabBtn">Articles</button>
-  </nav>
 
   <div class="fixed-tab-panel" id="fixedPanel-dashboard"></div>
 
@@ -587,10 +684,21 @@ form { display: flex; flex-direction: column; gap: 14px; }
 
 <main id="app" hidden>
   <section id="tab-dashboard">
-    <div class="tiles" id="dashboardTiles"></div>
-    <div id="dashboardAlert"></div>
-    <h3 style="margin-top:4px">Top 5 des ventes (7 derniers jours)</h3>
-    <div class="article-list" id="dashboardTopSales"></div>
+    <div class="kpi-grid" id="dashboardTiles"></div>
+    <div id="dashboardAlert" hidden></div>
+    <div class="dash-grid">
+      <div class="card" id="dashChartCard">
+        <div class="card-head"><h3 id="dashChartTitle">Chiffre d'affaires — 14 derniers jours</h3>
+          <span class="report-legend" style="margin:0"><span><i style="background:var(--chart-ca)"></i>CA</span><span><i style="background:var(--chart-margin)"></i>dont marge</span></span></div>
+        <div id="dashChart"></div>
+      </div>
+      <div class="card"><div class="card-head"><h3>À traiter</h3></div><div id="dashTodo" style="display:flex; flex-direction:column; gap:8px"></div></div>
+    </div>
+    <div class="dash-grid">
+      <div class="card"><div class="card-head"><h3>Dernières ventes</h3><button type="button" class="card-link" data-goto="historique">Tout voir</button></div>
+        <div style="overflow-x:auto" id="dashLastSales"></div></div>
+      <div class="card"><div class="card-head"><h3>Top 5 des ventes (7 jours)</h3></div><div class="article-list" id="dashboardTopSales"></div></div>
+    </div>
   </section>
 
   <section id="tab-stock" hidden>
@@ -775,11 +883,13 @@ function stockLevel(a) {
 // ---------------------------------------------------------------------------
 // Tabs
 // ---------------------------------------------------------------------------
-document.querySelectorAll('.tab-btn').forEach(btn => {
+document.querySelectorAll('.tab-btn[data-tab]').forEach(btn => {
   btn.addEventListener('click', () => {
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-btn[data-tab]').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     currentTab = btn.dataset.tab;
+    document.getElementById('pageTitle').textContent = btn.dataset.title || btn.textContent.trim();
+    if (currentTab === 'dashboard') loadDashboardStats();
     ['dashboard', 'stock', 'historique', 'clients', 'ventes', 'achats', 'livraisons', 'tresorerie', 'rapports', 'articles'].forEach(t => {
       document.getElementById('tab-' + t).hidden = (t !== currentTab);
       document.getElementById('fixedPanel-' + t).hidden = (t !== currentTab);
@@ -789,6 +899,23 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 });
 function goToTab(tab) {
   document.querySelector(`.tab-btn[data-tab="${tab}"]`)?.click();
+}
+function updateNavGroups() {
+  document.querySelectorAll('.nav-group').forEach(g => {
+    g.hidden = ![...g.querySelectorAll('button')].some(b => !b.hidden);
+  });
+}
+function updateSidebarShop() {
+  const name = shopInfo?.name || 'Ma boutique';
+  document.getElementById('sbShopName').textContent = name;
+  document.getElementById('sbLogo').textContent = name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase() || 'B';
+  document.getElementById('sbShopSub').textContent = currentProfile ? (ROLE_LABELS[currentProfile.role] || '') : '';
+}
+function setNavBadge(tab, value) {
+  const el = document.getElementById('navBadge-' + tab);
+  if (!el) return;
+  el.hidden = !value;
+  el.textContent = value || '';
 }
 
 // ---------------------------------------------------------------------------
@@ -1217,6 +1344,7 @@ async function loadShopInfo() {
   const { data, error } = await supa.from('shops').select('*').eq('id', currentProfile.shop_id).single();
   if (error) { console.error(error); return; }
   shopInfo = data;
+  updateSidebarShop();
 }
 
 async function loadSalesDocuments() {
@@ -4292,81 +4420,164 @@ function printReturn(id) {
 // à partir des données déjà chargées (articles, movements) : aucune requête
 // supplémentaire.
 // ---------------------------------------------------------------------------
+// Tableau de bord (refonte nov. 2026). Pour owner / gérant / comptable, les
+// chiffres viennent de report_sales (21 derniers jours : 14 pour le graphique
+// + comparaison avec le même jour de la semaine précédente) ; pour les autres
+// rôles, des derniers mouvements chargés.
+let dashReport = null;
+let dashReportAt = 0;
+async function loadDashboardStats(force) {
+  if (!canManageInvoices()) return;
+  if (!force && dashReport && Date.now() - dashReportAt < 60000) return;
+  const today = isoDate(new Date());
+  const { data, error } = await supa.rpc('report_sales', { p_from: addDays(today, -20), p_to: today });
+  if (error) { console.error(error); return; }
+  dashReport = data;
+  dashReportAt = Date.now();
+  renderDashboard();
+}
+
 function renderDashboard() {
   const gerant = isGerant();
+  const manager = canManageInvoices();
+  const today = isoDate(new Date());
   const now = new Date();
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   const sevenDaysAgo = now.getTime() - 7 * 24 * 60 * 60 * 1000;
+  const price = m => Number(m.unit_price ?? articles[m.article_id]?.sell_price ?? 0);
 
   const salesToday = movements.filter(m => m.type === 'vente' && new Date(m.at).getTime() >= startOfToday);
   const unitsSoldToday = salesToday.reduce((s, m) => s + (m.qty || 0), 0);
-  const revenueToday = salesToday.reduce((s, m) => {
-    const a = articles[m.article_id];
-    return s + (m.qty || 0) * (a?.sell_price || 0);
-  }, 0);
-
   const sales7d = movements.filter(m => m.type === 'vente' && new Date(m.at).getTime() >= sevenDaysAgo);
-  const margin7d = sales7d.reduce((s, m) => {
-    const a = articles[m.article_id];
-    if (!a) return s;
-    return s + (m.qty || 0) * ((a.sell_price || 0) - (a.buy_price || 0));
-  }, 0);
 
   const list = Object.entries(articles);
   const lowStock = list.filter(([, a]) => (a.qty || 0) <= (a.threshold ?? 3) && (a.qty || 0) > 0);
   const outStock = list.filter(([, a]) => (a.qty || 0) <= 0);
-  const alertCount = lowStock.length + outStock.length;
-  const unpaidInvoices = Object.values(salesDocs).reduce((acc, d) => {
-    const r = (d.doc_type === 'facture' && d.status === 'emise') ? invoiceRemaining(d) : 0;
-    if (r > 0) { acc.count += 1; acc.total += r; }
-    return acc;
-  }, { count: 0, total: 0 });
-  const supplierDebt = Object.values(purchaseOrders).reduce((s, po) => s + poDebt(po), 0);
+  const invoicesDue = Object.values(salesDocs).filter(d => d.doc_type === 'facture' && d.status === 'emise' && invoiceRemaining(d) > 0);
+  const invoicesLate = invoicesDue.filter(d => d.due_date && d.due_date < today);
+  const dueTotal = invoicesDue.reduce((s, d) => s + invoiceRemaining(d), 0);
+  const creditTotal = Object.values(customers).reduce((s, c) => s + (Number(c.credit_balance) || 0), 0);
+  const deliveriesToday = Object.values(deliveriesMap).filter(d => (d.status === 'a_livrer' || d.status === 'en_cours') && (!d.scheduled_date || d.scheduled_date <= today));
+  const in7 = addDays(today, 7);
+  const posSoon = Object.values(purchaseOrders).filter(po => poToPay(po) > 0 && po.due_date && po.due_date <= in7);
+  const supplierSoon = posSoon.reduce((s, po) => s + poToPay(po), 0);
+  const treasuryTotal = treasuryAccounts.filter(a => a.active).reduce((s, a) => s + Number(a.balance || 0), 0);
 
-  document.getElementById('dashboardTiles').innerHTML = `
-    <div class="tile"><div class="label">Ventes aujourd'hui</div><div class="value">${unitsSoldToday}</div></div>
-    ${gerant ? `<div class="tile"><div class="label">CA aujourd'hui</div><div class="value small">${fmtFCFA(revenueToday)}</div></div>` : ''}
-    ${gerant ? `<div class="tile"><div class="label">Marge 7 jours</div><div class="value small">${fmtFCFA(margin7d)}</div></div>` : ''}
-    ${gerant && unpaidInvoices.count > 0 ? `<div class="tile"><div class="label">Factures impayées (${unpaidInvoices.count})</div><div class="value small">${fmtFCFA(unpaidInvoices.total)}</div></div>` : ''}
-    ${gerant && supplierDebt > 0 ? `<div class="tile"><div class="label">Dettes fournisseurs</div><div class="value small">${fmtFCFA(supplierDebt)}</div></div>` : ''}
-    ${gerant && treasuryAccounts.length > 0 ? `<div class="tile"><div class="label">Trésorerie</div><div class="value small">${fmtFCFA(treasuryAccounts.filter(a => a.active).reduce((s, a) => s + Number(a.balance || 0), 0))}</div></div>` : ''}
-  `;
+  // Agrégats journaliers (report_sales)
+  const byDay = {};
+  if (dashReport) {
+    for (const l of dashReport.lines) {
+      const d = byDay[l.d] || (byDay[l.d] = { ca: 0, cost: 0, tickets: new Set(), n: 0 });
+      d.ca += Number(l.ca); d.cost += Number(l.cost);
+      if (l.src === 'comptoir') d.n += 1; else if (l.src === 'facture') d.tickets.add(l.ref);
+    }
+  }
+  const dayStat = iso => { const d = byDay[iso]; return d ? { ca: d.ca, margin: d.ca - d.cost, count: d.n + d.tickets.size } : { ca: 0, margin: 0, count: 0 }; };
+  const tdy = manager && dashReport ? dayStat(today) : {
+    ca: salesToday.reduce((s, m) => s + (m.qty || 0) * price(m), 0),
+    margin: salesToday.reduce((s, m) => s + (m.qty || 0) * (price(m) - Number(m.unit_cost ?? articles[m.article_id]?.buy_price ?? 0)), 0),
+    count: salesToday.length,
+  };
+  const lastWeek = dashReport ? dayStat(addDays(today, -7)) : null;
+  const delta = (cur, prev) => {
+    if (!prev) return '';
+    const d = (cur - prev) / Math.abs(prev);
+    return `<span class="k-sub ${d >= 0 ? 'up' : 'down'}">${d >= 0 ? '▲' : '▼'} ${Math.abs(Math.round(d * 100))} % vs ${new Date(addDays(today, -7) + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'long' })} dernier</span>`;
+  };
 
+  const kpis = [];
+  if (gerant || manager) {
+    kpis.push(`<div class="kpi"><span class="k-label">CA du jour</span><span class="k-value">${fmtFCFA(tdy.ca)}</span>${delta(tdy.ca, lastWeek?.ca) || `<span class="k-sub">${tdy.count} vente(s)</span>`}</div>`);
+    kpis.push(`<div class="kpi"><span class="k-label">Marge du jour</span><span class="k-value">${fmtFCFA(tdy.margin)}</span><span class="k-sub">${tdy.ca > 0 ? `Taux de marge ${Math.round(tdy.margin / tdy.ca * 100)} %` : '—'}</span></div>`);
+    if (manager && treasuryAccounts.length) kpis.push(`<div class="kpi"><span class="k-label">Trésorerie disponible</span><span class="k-value">${fmtFCFA(treasuryTotal)}</span><span class="k-sub">${treasuryAccounts.filter(a => a.active).length} comptes</span></div>`);
+    else kpis.push(`<div class="kpi"><span class="k-label">Articles vendus aujourd'hui</span><span class="k-value">${unitsSoldToday}</span><span class="k-sub">${tdy.count} vente(s)</span></div>`);
+    kpis.push(`<div class="kpi"><span class="k-label">À encaisser</span><span class="k-value">${fmtFCFA(dueTotal + creditTotal)}</span>${invoicesLate.length ? `<span class="k-sub down">▼ ${invoicesLate.length} facture(s) en retard</span>` : `<span class="k-sub">Factures + crédit clients</span>`}</div>`);
+  } else {
+    const mine = salesToday.filter(m => m.by_name && m.by_name === (currentProfile?.display_name || ''));
+    kpis.push(`<div class="kpi"><span class="k-label">Articles vendus aujourd'hui</span><span class="k-value">${unitsSoldToday}</span><span class="k-sub">${salesToday.length} vente(s) dans la boutique</span></div>`);
+    kpis.push(`<div class="kpi"><span class="k-label">Mes ventes aujourd'hui</span><span class="k-value">${mine.length}</span><span class="k-sub">${fmtFCFA(mine.reduce((s, m) => s + (m.qty || 0) * price(m), 0))}</span></div>`);
+    kpis.push(`<div class="kpi"><span class="k-label">Stock à surveiller</span><span class="k-value">${outStock.length + lowStock.length}</span><span class="k-sub">${outStock.length} épuisé(s), ${lowStock.length} bas</span></div>`);
+  }
+  document.getElementById('dashboardTiles').innerHTML = kpis.join('');
+
+  // Graphique 14 jours
+  const chartCard = document.getElementById('dashChartCard');
+  chartCard.hidden = !(manager && dashReport);
+  if (manager && dashReport) {
+    const days = [];
+    for (let i = 13; i >= 0; i--) days.push(addDays(today, -i));
+    const stats = days.map(dayStat);
+    const max = Math.max(1, ...stats.map(x => x.ca));
+    document.getElementById('dashChart').innerHTML = `
+      <div class="dash-bars">${stats.map((x, i) => `
+        <div class="dash-bar${days[i] === today ? ' today' : ''}" title="${fmtDate(days[i])} — CA ${fmtFCFA(x.ca)} · marge ${fmtFCFA(x.margin)}">
+          <div class="ca" style="height:${Math.max(0, x.ca) / max * 100}%"><div class="mg" style="height:${x.ca > 0 ? Math.max(0, Math.min(x.margin, x.ca)) / x.ca * 100 : 0}%"></div></div>
+        </div>`).join('')}</div>
+      <div class="dash-axis"><span>${fmtDate(days[0])}</span><span>max ${fmtFCFA(max)}</span><span>Aujourd'hui</span></div>
+      <div class="current-stock-hint" style="display:block">Sur 14 jours : CA ${fmtFCFA(stats.reduce((s, x) => s + x.ca, 0))}, marge ${fmtFCFA(stats.reduce((s, x) => s + x.margin, 0))}.</div>`;
+  }
+
+  // À traiter
   const backupAge = (currentProfile?.role === 'owner' && shopInfo) ? backupAgeDays() : -1;
   const backupDue = backupAge === null || backupAge >= 7;
-  document.getElementById('dashboardAlert').innerHTML = (alertCount > 0
-    ? `<div class="alert-banner">⚠ ${outStock.length} article(s) épuisé(s), ${lowStock.length} en stock bas</div>`
-    : '') + (backupDue
-    ? `<div class="alert-banner" style="margin-top:6px; cursor:pointer" id="backupReminder">💾 ${backupAge === null ? 'Aucune sauvegarde des données téléchargée' : `Dernière sauvegarde il y a ${backupAge} jours`} — cliquez pour sauvegarder</div>`
-    : '');
+  const todo = [];
+  if (outStock.length) todo.push({ cls: 'bad', label: `${outStock.length} article(s) en rupture`, val: outStock.length, go: 'stock' });
+  if (lowStock.length) todo.push({ cls: 'warn', label: 'Stock bas (sous le seuil)', val: lowStock.length, go: 'stock' });
+  if (invoicesLate.length && canManageInvoices()) todo.push({ cls: 'bad', label: 'Factures en retard', val: invoicesLate.length, go: 'ventes' });
+  if (invoicesDue.length && canManageInvoices()) todo.push({ cls: '', label: 'Factures à encaisser', val: fmtFCFA(dueTotal), go: 'ventes' });
+  if (deliveriesToday.length) todo.push({ cls: '', label: 'Livraisons du jour', val: deliveriesToday.length, go: 'livraisons' });
+  if (supplierSoon > 0 && canManageInvoices()) todo.push({ cls: 'warn', label: 'Fournisseurs à payer sous 7 jours', val: fmtFCFA(supplierSoon), go: 'achats' });
+  if (backupDue) todo.push({ cls: 'warn', id: 'backupReminder', label: backupAge === null ? 'Aucune sauvegarde des données' : `Dernière sauvegarde il y a ${backupAge} jours`, val: '💾' });
+  document.getElementById('dashTodo').innerHTML = todo.length ? todo.map(t => `
+    <button type="button" class="todo-item ${t.cls}" ${t.go ? `data-goto="${t.go}"` : ''} ${t.id ? `id="${t.id}"` : ''}>
+      <span class="t-dot"></span><span class="t-label">${t.label}</span><span class="t-val">${t.val}</span></button>`).join('')
+    : '<div class="empty-state">Rien d\'urgent. Bonne journée !</div>';
   document.getElementById('backupReminder')?.addEventListener('click', openSecuritySheet);
+
+  // Badges du menu
+  setNavBadge('stock', outStock.length + lowStock.length || '');
+  setNavBadge('ventes', canManageInvoices() ? (invoicesLate.length || '') : '');
+  setNavBadge('livraisons', deliveriesToday.length || '');
+
+  // Dernières ventes
+  const last = movements.filter(m => m.type === 'vente').slice().sort((a, b) => new Date(b.at) - new Date(a.at)).slice(0, 6);
+  document.getElementById('dashLastSales').innerHTML = last.length ? `<table class="dash-table">
+    <thead><tr><th>Heure</th><th>Article</th><th>Paiement</th><th>Vendeur</th><th class="n">Montant</th></tr></thead>
+    <tbody>${last.map(m => {
+      const meth = m.on_credit ? 'credit' : (m.payment_method || '');
+      const d = new Date(m.at);
+      const when = isoDate(d) === today ? d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+      return `<tr><td class="t">${when}</td><td>${escapeHtml(articles[m.article_id]?.name || 'Article')}${m.qty > 1 ? ` × ${m.qty}` : ''}</td>
+        <td>${meth ? `<span class="pay-chip ${meth}">${escapeHtml(m.on_credit ? 'Crédit' : (PAY_METHODS[meth] || meth))}</span>` : '<span class="pay-chip">—</span>'}</td>
+        <td style="color:var(--ink-dim)">${escapeHtml(m.by_name || '')}</td><td class="n">${fmtFCFA((m.qty || 0) * price(m))}</td></tr>`;
+    }).join('')}</tbody></table>` : '<div class="empty-state">Aucune vente récente.</div>';
 
   // Top 5 des articles les plus vendus sur 7 jours (en quantité)
   const soldByArticle = {};
-  sales7d.forEach(m => {
-    soldByArticle[m.article_id] = (soldByArticle[m.article_id] || 0) + (m.qty || 0);
-  });
+  sales7d.forEach(m => { soldByArticle[m.article_id] = (soldByArticle[m.article_id] || 0) + (m.qty || 0); });
   const top5 = Object.entries(soldByArticle)
     .map(([articleId, qty]) => ({ articleId, qty, article: articles[articleId] }))
-    .filter(e => e.article)
-    .sort((a, b) => b.qty - a.qty)
-    .slice(0, 5);
-
+    .filter(e => e.article).sort((a, b) => b.qty - a.qty).slice(0, 5);
   const topEl = document.getElementById('dashboardTopSales');
-  if (top5.length === 0) {
-    topEl.innerHTML = '<div class="empty-state">Aucune vente sur les 7 derniers jours.</div>';
-  } else {
-    topEl.innerHTML = top5.map(e => `
+  topEl.innerHTML = top5.length === 0 ? '<div class="empty-state">Aucune vente sur les 7 derniers jours.</div>'
+    : top5.map(e => `
       <div class="article-row">
         <div class="info">
           <div class="name">${escapeHtml(e.article.name)}</div>
           <div class="meta">${escapeHtml(e.article.category || 'Sans catégorie')}</div>
         </div>
         <div class="qty">${e.qty}<span class="unit">vendus</span></div>
-      </div>
-    `).join('');
-  }
+      </div>`).join('');
+
+  // Sous-titre de l'en-tête
+  const sub = document.getElementById('pageSub');
+  if (sub) sub.textContent = now.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
 }
+document.getElementById('tab-dashboard').addEventListener('click', e => {
+  const b = e.target.closest('[data-goto]');
+  if (b) goToTab(b.dataset.goto);
+});
+document.getElementById('newSaleBtn').addEventListener('click', () => openMoveSheet(null));
 
 function applyRoleToUI() {
   const gerant = isGerant();
@@ -4380,7 +4591,7 @@ function applyRoleToUI() {
   document.getElementById('reportsTabBtn').hidden = !canManageInvoices();
   const livreur = currentProfile.role === 'livreur';
   // Le livreur n'a que l'onglet Livraisons (ses livraisons)
-  document.querySelectorAll('.tab-btn').forEach(b => {
+  document.querySelectorAll('.tab-btn[data-tab]').forEach(b => {
     if (livreur) b.hidden = b.dataset.tab !== 'livraisons';
     else if (b.dataset.tab === 'dashboard' || b.dataset.tab === 'stock' || b.dataset.tab === 'historique' || b.dataset.tab === 'clients') b.hidden = false;
   });
@@ -4389,6 +4600,9 @@ function applyRoleToUI() {
   // Si l'onglet courant n'est plus accessible avec ce rôle, on bascule
   const currentBtn = document.querySelector(`.tab-btn[data-tab="${currentTab}"]`);
   if (!currentBtn || currentBtn.hidden) goToTab(livreur ? 'livraisons' : 'stock');
+  document.getElementById('newSaleBtn').hidden = livreur;
+  updateNavGroups();
+  updateSidebarShop();
   const label = ROLE_LABELS[currentProfile.role] || (gerant ? 'Gérant' : 'Vendeur');
   const cls = gerant ? 'gerant' : 'vendeur';
   document.getElementById('whoLabel').innerHTML = `${escapeHtml(currentProfile.display_name || currentProfile.email)} <span class="role-badge ${cls}">${label}</span>`;
@@ -5595,6 +5809,7 @@ function enterAppWithProfile() {
   loadDeliveries();
   loadShopInfo().then(loadTreasury);
   supa.rpc('log_session_start').then(() => {}, () => {});
+  setTimeout(() => loadDashboardStats(true), 1500);
   updateOnlineStatus();
   updatePendingBadge();
   syncPendingMovements();
@@ -5637,6 +5852,7 @@ document.getElementById('logoutBtn').addEventListener('click', async () => {
   treasuryLedger = [];
   reportData = null;
   reportPrev = null;
+  dashReport = null;
   shopInfo = null;
   showLogin();
 });
