@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="fr" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Télécharger ERP Boutique</title>
+<meta name="theme-color" content="#16261d">
+<link rel="icon" href="icon-192.png">
+<style>
+@font-face { font-family: 'DM Sans'; src: url('fonts/dm-sans-latin-400-normal.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'DM Sans'; src: url('fonts/dm-sans-latin-600-normal.woff2') format('woff2'); font-weight: 600; font-display: swap; }
+@font-face { font-family: 'DM Sans'; src: url('fonts/dm-sans-latin-700-normal.woff2') format('woff2'); font-weight: 700; font-display: swap; }
+:root { --bg: #f3f5f3; --surface: #fff; --border: #e1e7e2; --ink: #1b2420; --dim: #56655c; --accent: #3c7a52; --dark: #16261d; --warn-bg: #fdf3dc; --warn: #7a4d00; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: 'DM Sans', system-ui, sans-serif; line-height: 1.5; }
+header { background: var(--dark); color: #fff; padding: 28px 16px 34px; }
+.wrap { max-width: 860px; margin: 0 auto; }
+.brand { display: flex; align-items: center; gap: 12px; }
+.brand img { width: 44px; height: 44px; border-radius: 11px; }
+.brand strong { font-size: 1.25rem; }
+header h1 { font-size: clamp(1.6rem, 4vw, 2.2rem); margin: 22px 0 6px; letter-spacing: -0.01em; }
+header p { margin: 0; color: #c8d8cd; max-width: 560px; }
+main { padding: 24px 16px 48px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-top: -40px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 22px; display: flex; flex-direction: column; gap: 12px; }
+.card h2 { margin: 0; font-size: 1.15rem; }
+.card p { margin: 0; color: var(--dim); font-size: 0.95rem; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 18px; border-radius: 11px; font: inherit; font-weight: 600; text-decoration: none; }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: #33694a; }
+.btn-ghost { background: #fff; color: var(--ink); border: 1px solid #dde4df; }
+.small { font-size: 0.82rem; color: var(--dim); }
+section { margin-top: 28px; }
+section h2 { font-size: 1.1rem; margin: 0 0 10px; }
+ol { margin: 0; padding-left: 22px; }
+ol li { margin-bottom: 8px; }
+.note { background: var(--warn-bg); color: var(--warn); border-radius: 12px; padding: 14px 16px; font-size: 0.92rem; }
+a { color: #2f6343; }
+code { background: #eef3f0; border-radius: 5px; padding: 1px 6px; font-size: 0.9em; }
+footer { color: var(--dim); font-size: 0.82rem; text-align: center; padding: 0 16px 32px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="brand"><img src="icon-192.png" alt=""><strong>ERP Boutique</strong></div>
+    <h1>Installer ERP Boutique</h1>
+    <p>Caisse, stock, factures, livraisons et trésorerie de votre boutique, sur ordinateur et sur téléphone. Les deux versions partagent les mêmes données, en direct.</p>
+  </div>
+</header>
+<main>
+  <div class="wrap">
+    <div class="grid">
+      <div class="card">
+        <h2>Ordinateur Windows</h2>
+        <p>Recommandé pour la caisse et la gestion : écran large, impression des factures et des reçus.</p>
+        <a class="btn btn-primary" href="https://github.com/isaacdiomande/erp-boutique-releases/releases/latest/download/ERP-Boutique-Setup.exe">Télécharger pour Windows</a>
+        <span class="small">Windows 10 ou 11 · environ 5 Mo · <a href="https://github.com/isaacdiomande/erp-boutique-releases/releases/latest">autres fichiers et versions</a></span>
+      </div>
+      <div class="card">
+        <h2>Téléphone</h2>
+        <p>Idéal pour les livreurs et pour vendre en déplacement. Rien à télécharger : l'app s'ouvre dans Chrome.</p>
+        <a class="btn btn-ghost" href="./">Ouvrir l'app mobile</a>
+        <span class="small">Puis dans Chrome : <strong>⋮ → Ajouter à l'écran d'accueil</strong>.</span>
+      </div>
+    </div>
+
+    <section>
+      <h2>Installer sur Windows</h2>
+      <ol>
+        <li>Cliquez sur <strong>Télécharger pour Windows</strong> et ouvrez le fichier <code>ERP-Boutique-Setup.exe</code>.</li>
+        <li>Si Windows affiche « Windows a protégé votre ordinateur », cliquez sur <strong>Informations complémentaires</strong>, puis sur <strong>Exécuter quand même</strong>.</li>
+        <li>Suivez l'installation, puis ouvrez <strong>ERP Boutique</strong> depuis le menu Démarrer.</li>
+      </ol>
+      <p class="note" style="margin-top:12px">Le message de Windows apparaît parce que l'application n'a pas encore de signature numérique d'éditeur. Elle est publiée par la boutique pilote qui vous l'a envoyée ; ne téléchargez l'installeur que depuis cette page.</p>
+    </section>
+
+    <section>
+      <h2>Première connexion</h2>
+      <ol>
+        <li><strong>Vous ouvrez votre boutique</strong> : choisissez <em>Créer une boutique</em> et suivez les étapes.</li>
+        <li><strong>Vous rejoignez une boutique</strong> : demandez au propriétaire un <em>code d'invitation</em>, puis choisissez <em>Rejoindre une boutique</em> avec la même adresse email que celle de l'invitation.</li>
+      </ol>
+    </section>
+
+    <section>
+      <h2>Mettre à jour</h2>
+      <p>Sur téléphone, l'app se met à jour toute seule. Sur Windows, téléchargez de nouveau l'installeur depuis cette page et lancez-le : vos données ne sont pas touchées, elles sont en ligne.</p>
+    </section>
+  </div>
+</main>
+<footer>ERP Boutique · version pilote</footer>
+</body>
+</html>

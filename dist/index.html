@@ -767,6 +767,7 @@ form { display: flex; flex-direction: column; gap: 14px; }
     </form>
     <button type="button" class="btn btn-ghost btn-block" style="margin-top:10px" id="showSignupBtn">Créer une boutique</button>
     <button type="button" class="btn btn-ghost btn-block" id="showJoinBtn">Rejoindre une boutique (code d'invitation)</button>
+    <p class="current-stock-hint" id="desktopDownloadHint" style="margin-top:14px; text-align:center" hidden>Sur ordinateur, installez plutôt l'app Windows : <a href="telecharger.html">télécharger ERP Boutique</a>.</p>
   </div>
 </div>
 
@@ -811,6 +812,12 @@ form { display: flex; flex-direction: column; gap: 14px; }
       <div class="field"><label for="noShopCode">Code d'invitation</label><input id="noShopCode" type="text" required autocomplete="off" placeholder="XXXX-XXXX" style="text-transform:uppercase; font-family:var(--font-mono)"></div>
       <button type="submit" class="btn btn-primary btn-block" style="margin-top:14px">Rejoindre la boutique</button>
       <p class="login-error" id="noShopError"></p>
+    </form>
+    <form id="noShopCreateForm" style="margin-top:18px; padding-top:16px; border-top:1px solid var(--border)">
+      <p class="current-stock-hint" style="margin:0 0 8px">Vous êtes propriétaire ? Créez votre boutique :</p>
+      <div class="field"><label for="noShopNewName">Nom de la boutique</label><input id="noShopNewName" type="text" required autocomplete="organization"></div>
+      <button type="submit" class="btn btn-ghost btn-block" style="margin-top:10px">Créer ma boutique</button>
+      <p class="login-error" id="noShopCreateError"></p>
     </form>
     <button type="button" class="btn btn-ghost btn-block" style="margin-top:10px" id="noShopLogoutBtn">Se déconnecter</button>
   </div>
@@ -5854,6 +5861,8 @@ function showSignup() {
 }
 
 document.getElementById('showSignupBtn').addEventListener('click', showSignup);
+// Lien vers l'installeur : seulement dans le navigateur (pas dans l'app de bureau Tauri)
+if (!window.__TAURI_INTERNALS__ && !window.__TAURI__) document.getElementById('desktopDownloadHint').hidden = false;
 document.getElementById('showLoginBtn').addEventListener('click', showLogin);
 // ---------------------------------------------------------------------------
 // Équipe : rejoindre une boutique par code d'invitation, gestion des membres
@@ -5945,6 +5954,23 @@ document.getElementById('joinForm').addEventListener('submit', async (e) => {
   }
 });
 
+document.getElementById('noShopCreateForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const name = document.getElementById('noShopNewName').value.trim();
+  const errEl = document.getElementById('noShopCreateError');
+  errEl.textContent = '';
+  if (!name) return;
+  try {
+    const { error } = await supa.rpc('create_shop_and_owner', { p_shop_name: name });
+    if (error) throw error;
+    const { data: u } = await supa.auth.getUser();
+    toast('Boutique créée.');
+    await loadProfileAndEnter(u.user.id);
+  } catch (err) {
+    console.error(err);
+    errEl.textContent = err.message || 'Création impossible.';
+  }
+});
 document.getElementById('noShopForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const errEl = document.getElementById('noShopError');
@@ -6120,7 +6146,10 @@ document.getElementById('signupForm').addEventListener('submit', async (e) => {
     if (!navigator.onLine) {
       throw new Error('La création d\'une boutique nécessite une connexion internet.');
     }
-    const { data, error } = await supa.auth.signUp({ email, password });
+    const { data, error } = await supa.auth.signUp({
+      email, password,
+      options: { data: { shop_name: shopName }, emailRedirectTo: 'https://erp-boutique.pages.dev/' },
+    });
     if (error) throw error;
     // Si la confirmation d'email est désactivée côté Supabase, signUp()
     // retourne déjà une session active et on peut créer la boutique tout
@@ -6224,19 +6253,23 @@ async function loadProfileAndEnter(userId) {
       showLogin();
       return;
     }
-    // En ligne mais vraie erreur (compte sans profil, etc.) : là on déconnecte.
-    console.error(error);
-    document.getElementById('loginError').textContent = "Votre compte n'a pas de profil associé. Contactez le gérant.";
-    await supa.auth.signOut();
-    showLogin();
-    return;
+    // En ligne : fiche introuvable (compte tout neuf) → on continue comme un
+    // compte sans boutique ; la boutique sera créée ci-dessous si le nom a été
+    // donné à l'inscription, sinon l'écran « Aucune boutique » le proposera.
+    console.warn('Profil introuvable', error);
+    const { data: u } = await supa.auth.getUser();
+    data = { id: userId, email: u?.user?.email || '', shop_id: null, role: 'vendeur', display_name: (u?.user?.email || '').split('@')[0] };
   }
 
   // Première connexion après confirmation d'email suite à une inscription :
   // le profil existe (créé par le trigger côté serveur) mais n'a pas encore
   // de boutique — on la crée maintenant avec le nom choisi au moment du signup.
-  if (!data.shop_id && pendingShopName) {
-    const shopNameToUse = pendingShopName;
+  let metaShopName = null;
+  if (!data.shop_id && !pendingShopName) {
+    try { const { data: u } = await supa.auth.getUser(); metaShopName = u?.user?.user_metadata?.shop_name || null; } catch (e) { /* non bloquant */ }
+  }
+  if (!data.shop_id && (pendingShopName || metaShopName)) {
+    const shopNameToUse = pendingShopName || metaShopName;
     pendingShopName = null;
     try {
       const { error: shopError } = await supa.rpc('create_shop_and_owner', { p_shop_name: shopNameToUse });

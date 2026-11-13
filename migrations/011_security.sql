@@ -40,7 +40,7 @@ declare
     'customer_payments_select',
     'customers_select_same_shop', 'customers_insert_same_shop', 'customers_update_same_shop', 'customers_delete_same_shop',
     'deliveries_select', 'invoice_payments_select_same_shop', 'movements_select_same_shop',
-    'profiles_select_same_shop', 'profiles_update_own',
+    'profiles_select_same_shop', 'profiles_select_own', 'profiles_update_own',
     'purchase_order_lines_select', 'purchase_orders_select', 'return_lines_select_same_shop', 'returns_select_same_shop',
     'sales_document_lines_select_same_shop', 'sales_documents_select_same_shop', 'shop_invitations_select_owner',
     'shops_select_own', 'supplier_payments_select',
