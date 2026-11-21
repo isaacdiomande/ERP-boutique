@@ -3,7 +3,7 @@
 // Les données viennent toujours de Supabase en direct ; leur copie hors-ligne
 // est gérée par l'app elle-même (IndexedDB).
 
-const CACHE_NAME = 'erp-boutique-v3';
+const CACHE_NAME = 'erp-boutique-v4';
 const APP_SHELL = [
   './',
   './index.html',
@@ -13,6 +13,8 @@ const APP_SHELL = [
   './icon-512.png',
   './vendor/supabase-2.45.4.min.js',
   './vendor/xlsx-0.18.5.full.min.js',
+  './vendor/zxing-library-0.21.3.min.js',
+  './vendor/jsbarcode-3.11.6.all.min.js',
   './fonts/dm-sans-latin-400-normal.woff2',
   './fonts/dm-sans-latin-600-normal.woff2',
   './fonts/ibm-plex-mono-latin-500-normal.woff2',

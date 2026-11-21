@@ -299,6 +299,23 @@ nav.tabs button.active .nav-badge { background: rgba(0,0,0,0.2); color: #fff; }
 .dash-table .t { font-family: var(--font-mono); color: var(--ink-dim); white-space: nowrap; }
 .pay-chip { display: inline-block; font-size: 0.72rem; border-radius: 999px; padding: 2px 8px; background: var(--surface-sunken); color: var(--ink-dim); white-space: nowrap; }
 .pay-chip.especes { background: var(--good-bg); color: var(--good); }
+.pay-chip.warn { background: var(--warn-bg); color: var(--warn); }
+.scan-btn { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px; border: 1px solid #dde4df; border-radius: 9px; background: var(--surface); color: var(--ink); cursor: pointer; }
+.scan-btn:hover { border-color: var(--accent); color: var(--accent); }
+.pos-search .scan-btn { width: 34px; height: 34px; margin-right: -6px; border: none; background: transparent; }
+.barcode-row { display: flex; gap: 8px; align-items: center; }
+.barcode-row input, .barcode-row select { flex: 1; min-width: 0; }
+.barcode-row .btn { flex: none; padding-inline: 12px; }
+.bc-tag { font-family: var(--font-mono); font-size: 0.78em; background: var(--surface-sunken); border-radius: 6px; padding: 1px 6px; letter-spacing: 0.02em; }
+.bc-unknown { text-align: center; padding: 8px 0; }
+.cam-box { position: relative; width: 100%; aspect-ratio: 4 / 3; background: #0d1410; border-radius: 12px; overflow: hidden; }
+.cam-box video { width: 100%; height: 100%; object-fit: cover; }
+.cam-aim { position: absolute; left: 12%; right: 12%; top: 32%; bottom: 32%; border: 2px solid rgba(255,255,255,0.85); border-radius: 10px; box-shadow: 0 0 0 999px rgba(0,0,0,0.28); }
+.pay-chip.bad { background: var(--bad-bg); color: var(--bad); }
+.console-toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.console-toolbar input[type=search], .console-toolbar select { height: 40px; padding: 0 12px; border: 1px solid #dde4df; border-radius: 10px; background: #fff; font: inherit; font-size: 0.88rem; color: var(--ink); box-sizing: border-box; }
+.console-toolbar input[type=search] { flex: 1 1 220px; min-width: 0; }
+.report-table td.num, .report-table th.num { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .pay-chip.credit { background: #f1ecf9; color: #5b3a8f; }
 .pay-chip.wave { background: #e3f0fb; color: #164e7a; }
 .pay-chip.orange_money { background: #fdecdc; color: #8a3d00; }
@@ -413,6 +430,9 @@ form { display: flex; flex-direction: column; gap: 14px; }
 .offline-pill { background: var(--bad-bg); color: var(--bad); }
 .offline-pill .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--bad); }
 .pending-pill { background: var(--warn-bg); color: var(--warn); }
+.failed-pill { background: var(--bad); color: #fff; border: none; cursor: pointer; font: inherit; font-weight: 700; }
+.fail-hint { color: var(--ink-dim); font-size: 0.82rem; }
+.btn-danger { background: var(--bad); color: #fff; border-color: var(--bad); }
 .history-row.pending { opacity: 0.75; border-style: dashed; }
 .history-row .pending-tag { flex: none; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; color: var(--warn); background: var(--warn-bg); padding: 2px 6px; border-radius: 999px; }
 
@@ -463,6 +483,12 @@ form { display: flex; flex-direction: column; gap: 14px; }
 
 /* Zone d'impression : invisible à l'écran, seule visible à l'impression */
 #printArea { display: none; }
+.plabels { display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: 26.5mm; gap: 0; }
+.plabel { border: 0.2mm dashed #bbb; padding: 1.4mm 2mm 1mm; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; break-inside: avoid; font-family: Arial, sans-serif; color: #000; }
+.plabel .pl-top { display: flex; justify-content: space-between; gap: 2mm; align-items: baseline; }
+.plabel .pl-name { font-size: 7.5pt; font-weight: 700; line-height: 1.1; max-height: 2.2em; overflow: hidden; }
+.plabel .pl-price { font-size: 8.5pt; font-weight: 700; white-space: nowrap; }
+.plabel .pl-shop { font-size: 5.5pt; color: #444; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 @media print {
   @page { size: A4; margin: 14mm; }
   body > *:not(#printArea) { display: none !important; }
@@ -577,6 +603,7 @@ form { display: flex; flex-direction: column; gap: 14px; }
       <button class="tab-btn sb-tool" id="teamBtn" hidden><svg class="nav-ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg><span>Équipe</span></button>
       <button class="tab-btn sb-tool" id="securityBtn" hidden><svg class="nav-ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></svg><span>Sécurité</span></button>
       <button class="tab-btn sb-tool" id="licencesBtn" hidden><svg class="nav-ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 7a4 4 0 1 1-3.9 4.9L3 20v-3h3v-3h3l2.1-2.1A4 4 0 0 1 15 7zM16.5 8.5h.01"/></svg><span>Licences</span></button>
+      <button class="tab-btn sb-tool" id="consoleBtn" hidden><svg class="nav-ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21V9l9-6 9 6v12M9 21v-6h6v6M3 21h18"/></svg><span>Console boutiques</span></button>
     </div>
     </nav>
     <div class="sb-spacer"></div>
@@ -600,6 +627,7 @@ form { display: flex; flex-direction: column; gap: 14px; }
         <span id="offlineLabel">Hors-ligne</span>
       </span>
       <span class="status-pill pending-pill" id="pendingBadge" hidden></span>
+      <button type="button" class="status-pill failed-pill" id="failedBadge" title="Opérations hors-ligne refusées à la synchronisation" hidden></button>
       <button type="button" class="btn btn-primary top-cta" id="newSaleBtn" hidden>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Nouvelle vente</button>
     </div>
@@ -750,6 +778,8 @@ form { display: flex; flex-direction: column; gap: 14px; }
 
   <div class="fixed-tab-panel" id="fixedPanel-articles" hidden>
     <button class="btn btn-ghost btn-block" id="addArticleBtn">+ Ajouter un article</button>
+    <button class="btn btn-ghost btn-block" id="scanArticleBtn"><svg width="16" height="16" style="vertical-align:-3px; margin-right:4px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 8v8M10 8v8M13 8v8M16 8v8"/></svg> Scanner un article</button>
+    <button class="btn btn-ghost btn-block" id="labelsBtn">🏷 Imprimer des étiquettes</button>
     <button class="btn btn-ghost btn-block" id="importExcelBtn">⬆ Importer depuis Excel</button>
     <button class="btn btn-ghost btn-block" id="exportExcelBtn">⬇ Exporter en Excel</button>
     <input type="file" id="importExcelInput" accept=".xlsx,.xls" hidden>
@@ -851,7 +881,8 @@ form { display: flex; flex-direction: column; gap: 14px; }
       <div class="pos-left">
         <label class="pos-search">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
-          <input type="search" id="posSearch" placeholder="Nom de l'article… (Entrée pour ajouter)" aria-label="Rechercher un article" autocomplete="off">
+          <input type="search" id="posSearch" placeholder="Nom ou code-barres… (Entrée pour ajouter)" aria-label="Rechercher un article ou scanner un code-barres" autocomplete="off">
+          <button type="button" class="scan-btn" id="posScanBtn" title="Scanner avec la caméra" aria-label="Scanner avec la caméra"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 8v8M10 8v8M13 8v8M16 8v8"/></svg></button>
         </label>
         <div class="pos-cats" id="posCats" role="group" aria-label="Catégories"></div>
         <div class="pos-grid" id="posProducts"></div>
@@ -932,15 +963,62 @@ form { display: flex; flex-direction: column; gap: 14px; }
 
 <!-- Config locale (vos clés Supabase) -->
 <script src="config.js"></script>
-<!-- SDK Supabase -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<!-- Export Excel -->
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<!-- SDK Supabase et export Excel : embarqués dans l'app (dossier vendor/)
+     pour que l'app démarre même sans connexion internet. -->
+<script src="vendor/supabase-2.45.4.min.js"></script>
+<script src="vendor/xlsx-0.18.5.full.min.js"></script>
 <script>
 // ============================================================================
 // Connexion Supabase
 // ============================================================================
-const supa = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+// Accès réel au serveur. navigator.onLine reste « vrai » quand le PC est relié
+// à la box mais que la box n'a plus internet (cas fréquent) : on suit donc aussi
+// le résultat des vraies requêtes, avec un délai maximum pour ne pas rester bloqué.
+let serverReachable = true;
+const FETCH_TIMEOUT_MS = 15000;
+function setServerReachable(ok) {
+  if (serverReachable === ok) return;
+  serverReachable = ok;
+  if (typeof updateOnlineStatus === 'function') updateOnlineStatus();
+  if (ok && typeof onConnectionBack === 'function') onConnectionBack();
+}
+function isOnline() { return navigator.onLine && serverReachable; }
+// Résout avec `fallback` si la promesse ne répond pas à temps (connexion très lente ou coupée).
+function withTimeout(promise, ms, fallback) {
+  return Promise.race([promise, new Promise(r => setTimeout(() => r(fallback), ms))]);
+}
+async function fetchWithTimeout(input, init = {}) {
+  const ctrl = new AbortController();
+  const outer = init.signal;
+  if (outer) { if (outer.aborted) ctrl.abort(); else outer.addEventListener('abort', () => ctrl.abort(), { once: true }); }
+  const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
+  try {
+    const res = await fetch(input, { ...init, signal: ctrl.signal });
+    setServerReachable(true);
+    return res;
+  } catch (err) {
+    if (!outer?.aborted) setServerReachable(false);
+    if (err?.name === 'AbortError' && !outer?.aborted) throw new TypeError('Failed to fetch (timeout)');
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+const supa = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY, {
+  global: { fetch: fetchWithTimeout },
+});
+
+// Session enregistrée sur le poste (lue directement, sans passer par le réseau) :
+// sert au démarrage hors-ligne quand le jeton a expiré et ne peut pas être renouvelé.
+function readStoredAuthSession() {
+  try {
+    const ref = new URL(window.SUPABASE_URL).hostname.split('.')[0];
+    const raw = localStorage.getItem(`sb-${ref}-auth-token`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed?.currentSession || parsed;
+  } catch (err) { return null; }
+}
 
 // ============================================================================
 // File d'attente hors-ligne (IndexedDB)
@@ -951,16 +1029,20 @@ const supa = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_A
 // ============================================================================
 const OFFLINE_DB_NAME = 'boutique-stock-offline';
 const OFFLINE_STORE = 'pending_movements';
+const CACHE_STORE = 'data_cache'; // instantanés des données pour consultation hors-ligne
 let offlineDb = null;
 
 function openOfflineDb() {
   return new Promise((resolve, reject) => {
     if (offlineDb) { resolve(offlineDb); return; }
-    const req = indexedDB.open(OFFLINE_DB_NAME, 1);
+    const req = indexedDB.open(OFFLINE_DB_NAME, 2);
     req.onupgradeneeded = () => {
       const db = req.result;
       if (!db.objectStoreNames.contains(OFFLINE_STORE)) {
         db.createObjectStore(OFFLINE_STORE, { keyPath: 'localId' });
+      }
+      if (!db.objectStoreNames.contains(CACHE_STORE)) {
+        db.createObjectStore(CACHE_STORE);
       }
     };
     req.onsuccess = () => { offlineDb = req.result; resolve(offlineDb); };
@@ -986,6 +1068,46 @@ async function getPendingMovements() {
     req.onsuccess = () => resolve(req.result || []);
     req.onerror = () => reject(req.error);
   });
+}
+
+async function updatePendingMovement(entry) {
+  const db = await openOfflineDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(OFFLINE_STORE, 'readwrite');
+    tx.objectStore(OFFLINE_STORE).put(entry);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+// Cache des données (articles, mouvements, clients, factures, boutique), par
+// boutique : chaque instantané porte le shop_id pour ne jamais afficher les
+// données d'une autre boutique après un changement de compte sur le poste.
+async function writeCache(key, value) {
+  try {
+    if (!currentProfile?.shop_id) return;
+    const db = await openOfflineDb();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(CACHE_STORE, 'readwrite');
+      tx.objectStore(CACHE_STORE).put({ shop_id: currentProfile.shop_id, at: Date.now(), value }, key);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  } catch (err) { /* stockage indisponible : pas bloquant */ }
+}
+
+async function readCache(key) {
+  try {
+    const db = await openOfflineDb();
+    const rec = await new Promise((resolve, reject) => {
+      const tx = db.transaction(CACHE_STORE, 'readonly');
+      const req = tx.objectStore(CACHE_STORE).get(key);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => reject(req.error);
+    });
+    if (!rec || rec.shop_id !== currentProfile?.shop_id) return null;
+    return rec.value;
+  } catch (err) { return null; }
 }
 
 async function removePendingMovement(localId) {
@@ -1218,7 +1340,7 @@ function renderArticlesManage() {
     <div class="article-row" data-id="${id}">
       <div class="info">
         <div class="name">${escapeHtml(a.name)}</div>
-        <div class="meta">${escapeHtml(a.category || 'Sans catégorie')} · Achat ${fmtFCFA(a.buy_price)} · Vente ${fmtFCFA(a.sell_price)} · Marge ${fmtFCFA(margin)}</div>
+        <div class="meta">${escapeHtml(a.category || 'Sans catégorie')} · Achat ${fmtFCFA(a.buy_price)} · Vente ${fmtFCFA(a.sell_price)} · Marge ${fmtFCFA(margin)}${a.barcode ? ` · <span class="bc-tag">${escapeHtml(a.barcode)}</span>` : ''}</div>
       </div>
       <div class="qty">${a.qty ?? 0}<span class="unit">unités</span></div>
     </div>`;
@@ -1543,8 +1665,16 @@ function customerInvoiceDue(customerId) {
 async function loadShopInfo() {
   if (!currentProfile?.shop_id) return;
   const { data, error } = await supa.from('shops').select('*').eq('id', currentProfile.shop_id).single();
-  if (error) { console.error(error); return; }
+  if (error) {
+    console.error(error);
+    if (isOfflineError(error) && !shopInfo) {
+      const cached = await readCache('shop');
+      if (cached) { shopInfo = cached; updateSidebarShop(); }
+    }
+    return;
+  }
   shopInfo = data;
+  writeCache('shop', data);
   updateSidebarShop();
 }
 
@@ -1554,16 +1684,28 @@ async function loadSalesDocuments() {
     .select('*, sales_document_lines(*), invoice_payments(*)')
     .order('created_at', { ascending: false })
     .limit(500);
-  if (error) { console.error(error); return; }
+  let rows = data;
+  if (error) {
+    console.error(error);
+    if (!isOfflineError(error) || Object.keys(salesDocs).length) return;
+    rows = await readCache('sales_documents');
+    if (!rows) return;
+  } else {
+    writeCache('sales_documents', data || []);
+  }
+  setSalesDocs(rows);
+  renderSalesDocs();
+  renderCustomers();
+  renderDashboard();
+}
+
+function setSalesDocs(rows) {
   salesDocs = {};
-  (data || []).forEach(d => {
+  (rows || []).forEach(d => {
     d.sales_document_lines = (d.sales_document_lines || []).slice().sort((a, b) => a.position - b.position);
     d.invoice_payments = (d.invoice_payments || []).slice().sort((a, b) => new Date(a.paid_at) - new Date(b.paid_at));
     salesDocs[d.id] = d;
   });
-  renderSalesDocs();
-  renderCustomers();
-  renderDashboard();
 }
 
 function renderSalesDocs() {
@@ -1770,7 +1912,7 @@ function openDocumentEditor(docType, id = null, prefill = null) {
     if (cleaned.length === 0) { errEl.textContent = 'Ajoutez au moins une ligne.'; return; }
     if (cleaned.some(l => !(l.qty > 0))) { errEl.textContent = 'Chaque ligne doit avoir une quantité d\'au moins 1.'; return; }
     if (cleaned.some(l => !(l.unit_price_ttc >= 0) || String(l.unit_price_ttc) === 'NaN')) { errEl.textContent = 'Chaque ligne doit avoir un prix.'; return; }
-    if (!navigator.onLine) { errEl.textContent = 'Les devis et factures nécessitent une connexion internet.'; return; }
+    if (!isOnline()) { errEl.textContent = 'Les devis et factures nécessitent une connexion internet.'; return; }
 
     const buttons = backdrop.querySelectorAll('button');
     buttons.forEach(b => b.disabled = true);
@@ -1894,7 +2036,7 @@ function openDocumentView(id) {
   backdrop.querySelector('.sheet-close').addEventListener('click', close);
 
   async function run(rpc, params, okMsg, reopen = true) {
-    if (!navigator.onLine) { toast('Connexion internet nécessaire.'); return null; }
+    if (!isOnline()) { toast('Connexion internet nécessaire.'); return null; }
     const { data, error } = await supa.rpc(rpc, params);
     if (error) { console.error(error); toast(error.message || 'Erreur.'); return null; }
     markActivity();
@@ -1921,7 +2063,7 @@ function openDocumentView(id) {
         case 'refuse': await run('set_quote_status', { p_id: id, p_status: 'refuse' }, 'Devis marqué refusé.'); break;
         case 'reopen': await run('set_quote_status', { p_id: id, p_status: 'en_attente' }, 'Devis remis en attente.'); break;
         case 'convert': {
-          if (!navigator.onLine) { toast('Connexion internet nécessaire.'); return; }
+          if (!isOnline()) { toast('Connexion internet nécessaire.'); return; }
           const { data: newId, error } = await supa.rpc('convert_quote_to_invoice', { p_id: id });
           if (error) { toast(error.message); return; }
           await loadSalesDocuments();
@@ -2402,7 +2544,7 @@ function openPurchaseOrderEditor(id = null) {
     if (cleaned.length === 0) { errEl.textContent = 'Ajoutez au moins une ligne.'; return; }
     if (cleaned.some(l => !(l.qty > 0))) { errEl.textContent = 'Chaque ligne doit avoir une quantité d\'au moins 1.'; return; }
     if (cleaned.some(l => !(l.unit_cost >= 0))) { errEl.textContent = 'Chaque ligne doit avoir un coût.'; return; }
-    if (!navigator.onLine) { errEl.textContent = 'Connexion internet nécessaire.'; return; }
+    if (!isOnline()) { errEl.textContent = 'Connexion internet nécessaire.'; return; }
     const buttons = backdrop.querySelectorAll('button'); buttons.forEach(b => b.disabled = true);
     try {
       const { data: poId, error } = await supa.rpc('save_purchase_order', {
@@ -2591,7 +2733,7 @@ function openReceiveSheet(id) {
     const errEl = document.getElementById('rcvError');
     const payload = lines.filter(l => l.qty > 0).map(l => ({ line_id: l.id, qty: l.qty }));
     if (payload.length === 0) { errEl.textContent = 'Indiquez au moins une quantité reçue.'; return; }
-    if (!navigator.onLine) { errEl.textContent = 'Connexion internet nécessaire.'; return; }
+    if (!isOnline()) { errEl.textContent = 'Connexion internet nécessaire.'; return; }
     const btn = e.target.querySelector('button[type="submit"]'); btn.disabled = true;
     const { error } = await supa.rpc('receive_purchase_order', { p_id: id, p_lines: payload, p_update_buy_price: document.getElementById('rcvUpdatePrice').checked });
     if (error) { errEl.textContent = error.message; btn.disabled = false; return; }
@@ -2831,7 +2973,7 @@ function openDeliveryEditor(sourceInvoiceId = null, id = null) {
     e.preventDefault();
     const errEl = document.getElementById('delError');
     errEl.textContent = '';
-    if (!navigator.onLine) { errEl.textContent = 'Connexion internet nécessaire.'; return; }
+    if (!isOnline()) { errEl.textContent = 'Connexion internet nécessaire.'; return; }
     const btn = e.target.querySelector('button[type="submit"]'); btn.disabled = true;
     const payload = {
       source_document_id: inv ? inv.id : null,
@@ -2909,7 +3051,7 @@ function openDeliveryView(id) {
   backdrop.querySelector('.sheet-close').addEventListener('click', close);
   const reopen = () => setTimeout(() => openDeliveryView(id), 0);
   const setStatus = async (params, msg) => {
-    if (!navigator.onLine) throw new Error('Connexion internet nécessaire.');
+    if (!isOnline()) throw new Error('Connexion internet nécessaire.');
     const { error } = await supa.rpc('set_delivery_status', { p_id: id, ...params });
     if (error) throw error;
     markActivity();
@@ -3925,7 +4067,7 @@ async function buildAccountingWorkbook(v) {
         : m.return_id ? 'Retour' : '',
     })));
     add('Stock actuel', Object.entries(articles).map(([id, a]) => ({
-      'Article': a.name, 'Catégorie': a.category || '', 'Stock': Number(a.qty) || 0, 'Seuil d\'alerte': a.threshold ?? 3,
+      'Article': a.name, 'Code-barres': a.barcode || '', 'Catégorie': a.category || '', 'Stock': Number(a.qty) || 0, 'Seuil d\'alerte': a.threshold ?? 3,
       'Prix d\'achat': n0(a.buy_price), 'Prix de vente': n0(a.sell_price),
       'Valeur au prix d\'achat': Math.max(0, Number(a.qty) || 0) * n0(a.buy_price), 'Valeur au prix de vente': Math.max(0, Number(a.qty) || 0) * n0(a.sell_price),
     })));
@@ -4236,6 +4378,383 @@ async function openSecuritySheet() {
 document.getElementById('securityBtn')?.addEventListener('click', openSecuritySheet);
 
 // ---------------------------------------------------------------------------
+// Codes-barres : douchette USB, caméra, codes internes, étiquettes
+// ---------------------------------------------------------------------------
+const SCAN_ICON = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 8v8M10 8v8M13 8v8M16 8v8"/></svg>';
+
+function normBarcode(v) { return String(v ?? '').replace(/\s+/g, '').slice(0, 64); }
+function looksLikeBarcode(v) { return /^\d{6,14}$/.test(v) || /^[A-Z0-9\-.]{6,}$/.test(v) && /\d/.test(v) && !/\s/.test(v); }
+function findArticleByBarcode(code) {
+  const c = normBarcode(code);
+  if (!c) return null;
+  const hit = Object.entries(articles).find(([, a]) => a.barcode && a.barcode === c);
+  if (hit) return hit[0];
+  // Lecteurs qui ajoutent ou retirent le 0 initial (UPC-A 12 chiffres ↔ EAN-13)
+  if (/^\d{12,13}$/.test(c)) {
+    const alt = c.length === 12 ? '0' + c : c.startsWith('0') ? c.slice(1) : null;
+    const hit2 = alt && Object.entries(articles).find(([, a]) => a.barcode === alt);
+    if (hit2) return hit2[0];
+  }
+  return null;
+}
+function ean13CheckDigit(d12) {
+  let sum = 0;
+  for (let i = 0; i < 12; i++) sum += Number(d12[i]) * (i % 2 ? 3 : 1);
+  return String((10 - (sum % 10)) % 10);
+}
+function isValidEan13(c) { return /^\d{13}$/.test(c) && ean13CheckDigit(c.slice(0, 12)) === c[12]; }
+// Code interne au format EAN-13, préfixe 20 (réservé par GS1 à l'usage interne des magasins).
+function generateInternalBarcode() {
+  for (let tries = 0; tries < 50; tries++) {
+    let d = '20';
+    for (let i = 0; i < 10; i++) d += Math.floor(Math.random() * 10);
+    const code = d + ean13CheckDigit(d);
+    if (!findArticleByBarcode(code)) return code;
+  }
+  return '200' + Date.now().toString().slice(-9) + '0';
+}
+// Bouton à double clic de confirmation (1er clic : change le libellé ; 2e : confirme)
+function confirmTwice(btn, label) {
+  if (btn.dataset.confirm === '1') { btn.dataset.confirm = ''; btn.textContent = btn.dataset.label; return true; }
+  btn.dataset.label = btn.textContent; btn.dataset.confirm = '1'; btn.textContent = label;
+  setTimeout(() => { if (btn.dataset.confirm === '1') { btn.dataset.confirm = ''; btn.textContent = btn.dataset.label; } }, 3000);
+  return false;
+}
+function scanFeedback(ok = true) {
+  try {
+    const ctx = scanFeedback.ctx || (scanFeedback.ctx = new (window.AudioContext || window.webkitAudioContext)());
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.frequency.value = ok ? 1250 : 320; g.gain.value = 0.06;
+    o.connect(g); g.connect(ctx.destination); o.start(); o.stop(ctx.currentTime + (ok ? 0.08 : 0.25));
+  } catch (e) { /* son indisponible */ }
+  try { navigator.vibrate && navigator.vibrate(ok ? 40 : [60, 40, 60]); } catch (e) {}
+}
+
+function loadScriptOnce(src) {
+  loadScriptOnce.cache = loadScriptOnce.cache || {};
+  if (!loadScriptOnce.cache[src]) {
+    loadScriptOnce.cache[src] = new Promise((resolve, reject) => {
+      const el = document.createElement('script');
+      el.src = src; el.onload = resolve; el.onerror = () => { delete loadScriptOnce.cache[src]; reject(new Error('Chargement impossible : ' + src)); };
+      document.head.appendChild(el);
+    });
+  }
+  return loadScriptOnce.cache[src];
+}
+
+// --- Caisse : article scanné -----------------------------------------------
+function posScan(code) {
+  const id = findArticleByBarcode(code);
+  if (id) {
+    const before = posLineQty(id);
+    posAdd(id, 1);
+    scanFeedback(posLineQty(id) > before);
+    return true;
+  }
+  scanFeedback(false);
+  openUnknownBarcodeSheet(code, 'caisse');
+  return false;
+}
+
+// Code inconnu : créer l'article, ou associer le code à un article existant.
+function openUnknownBarcodeSheet(code, from) {
+  if (document.getElementById('unknownBcSheet')) return;
+  const gerant = isGerant();
+  const noCode = Object.entries(articles).filter(([, a]) => !a.barcode).sort((a, b) => a[1].name.localeCompare(b[1].name, 'fr'));
+  const backdrop = document.createElement('div');
+  backdrop.className = 'sheet-backdrop';
+  backdrop.id = 'unknownBcSheet';
+  backdrop.innerHTML = `
+    <div class="sheet" style="width:min(520px, 100%)">
+      <div class="sheet-head"><h2>Code-barres inconnu</h2><button class="sheet-close" type="button">✕</button></div>
+      <div class="bc-unknown"><span class="bc-tag" style="font-size:1rem">${escapeHtml(code)}</span><div class="current-stock-hint">Aucun article de la boutique n'a ce code.</div></div>
+      ${gerant ? `
+        <button type="button" class="btn btn-primary btn-block" id="ubCreate">Créer un nouvel article avec ce code</button>
+        ${noCode.length ? `<div class="field"><label for="ubLink">… ou l'associer à un article existant (sans code)</label>
+          <div class="barcode-row"><select id="ubLink"><option value="">Choisir l'article…</option>${noCode.map(([id, a]) => `<option value="${id}">${escapeHtml(a.name)}</option>`).join('')}</select>
+          <button type="button" class="btn btn-ghost" id="ubLinkBtn">Associer</button></div></div>` : ''}`
+      : '<div class="current-stock-hint">Demandez au gérant d\'enregistrer ce code sur l\'article correspondant. En attendant, cherchez l\'article par son nom.</div>'}
+      <button type="button" class="btn btn-ghost btn-block" id="ubClose">Fermer</button>
+    </div>`;
+  document.body.appendChild(backdrop);
+  const close = () => { backdrop.remove(); if (from === 'caisse') document.getElementById('posSearch')?.focus(); };
+  backdrop.addEventListener('click', e => { if (e.target === backdrop) close(); });
+  backdrop.querySelector('.sheet-close').addEventListener('click', close);
+  backdrop.querySelector('#ubClose').addEventListener('click', close);
+  backdrop.querySelector('#ubCreate')?.addEventListener('click', () => { backdrop.remove(); openArticleSheet(null, { barcode: code }); });
+  backdrop.querySelector('#ubLinkBtn')?.addEventListener('click', async () => {
+    const id = backdrop.querySelector('#ubLink').value;
+    if (!id) { toast('Choisissez un article.'); return; }
+    if (!isOnline()) { toast('Connexion internet nécessaire pour modifier un article.'); return; }
+    const { error } = await supa.from('articles').update({ barcode: normBarcode(code) }).eq('id', id);
+    if (error) { toast(error.code === '23505' ? 'Ce code est déjà utilisé par un autre article.' : 'Erreur : ' + error.message); return; }
+    articles[id].barcode = normBarcode(code);
+    toast(`Code associé à « ${articles[id].name} ».`);
+    backdrop.remove();
+    if (from === 'caisse' && currentTab === 'caisse') posAdd(id, 1);
+  });
+}
+
+// --- Hors caisse : que faire de l'article scanné ? -------------------------
+function openScannedArticleSheet(code) {
+  const id = findArticleByBarcode(code);
+  if (!id) { scanFeedback(false); openUnknownBarcodeSheet(code, 'autre'); return; }
+  scanFeedback(true);
+  const a = articles[id];
+  const gerant = isGerant();
+  const backdrop = document.createElement('div');
+  backdrop.className = 'sheet-backdrop';
+  backdrop.innerHTML = `
+    <div class="sheet" style="width:min(520px, 100%)">
+      <div class="sheet-head"><h2>${escapeHtml(a.name)}</h2><button class="sheet-close" type="button">✕</button></div>
+      <div class="current-stock-hint">${escapeHtml(a.category || 'Sans catégorie')} · <span class="bc-tag">${escapeHtml(a.barcode)}</span></div>
+      <div class="kpi-grid" style="grid-template-columns:1fr 1fr">
+        <div class="kpi"><span class="k-label">En stock</span><span class="k-value">${Number(a.qty) || 0}</span></div>
+        <div class="kpi"><span class="k-label">Prix de vente</span><span class="k-value">${fmtFCFA(a.sell_price)}</span></div>
+      </div>
+      <button type="button" class="btn btn-primary btn-block" data-act="sell">Vendre (ajouter au panier de la caisse)</button>
+      ${gerant ? '<button type="button" class="btn btn-ghost btn-block" data-act="restock">Réassort : enregistrer une entrée de stock</button>' : ''}
+      ${gerant ? '<button type="button" class="btn btn-ghost btn-block" data-act="edit">Modifier l\'article</button>' : ''}
+    </div>`;
+  document.body.appendChild(backdrop);
+  const close = () => backdrop.remove();
+  backdrop.addEventListener('click', e => { if (e.target === backdrop) close(); });
+  backdrop.querySelector('.sheet-close').addEventListener('click', close);
+  backdrop.querySelectorAll('[data-act]').forEach(b => b.addEventListener('click', () => {
+    close();
+    if (b.dataset.act === 'sell') { goToTab('caisse'); setTimeout(() => posAdd(id, 1), 50); }
+    else if (b.dataset.act === 'restock') openMoveSheet(id, 'reassort');
+    else openArticleSheet(id);
+  }));
+}
+
+// --- Douchette USB : détection globale -------------------------------------
+// La douchette « tape » le code très vite puis Entrée. Quand aucun champ de
+// saisie n'a le focus, on capte cette rafale et on la traite comme un scan.
+(function setupHardwareScanner() {
+  let buf = '', last = 0, started = 0;
+  document.addEventListener('keydown', e => {
+    if (!currentProfile) return;
+    const t = e.target;
+    const typing = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable);
+    if (typing || e.ctrlKey || e.metaKey || e.altKey) { buf = ''; return; }
+    const now = performance.now();
+    if (now - last > 80) { buf = ''; started = now; }
+    last = now;
+    if (e.key === 'Enter') {
+      const code = normBarcode(buf);
+      const fast = code.length >= 4 && (now - started) / Math.max(1, code.length) < 40;
+      buf = '';
+      if (!fast) return;
+      e.preventDefault();
+      if (document.querySelector('.sheet-backdrop')) return; // une fenêtre est ouverte : on n'interfère pas
+      if (currentTab === 'caisse') posScan(code);
+      else openScannedArticleSheet(code);
+      return;
+    }
+    if (e.key.length === 1) buf += e.key;
+  }, true);
+})();
+
+// --- Caméra -----------------------------------------------------------------
+// BarcodeDetector (Chrome Android) si disponible, sinon ZXing (embarqué).
+const SCAN_FORMATS = ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'itf', 'qr_code'];
+async function makeBarcodeDecoder() {
+  if ('BarcodeDetector' in window) {
+    try {
+      const supported = await window.BarcodeDetector.getSupportedFormats();
+      const formats = SCAN_FORMATS.filter(f => supported.includes(f));
+      if (formats.includes('ean_13')) {
+        const det = new window.BarcodeDetector({ formats });
+        return async source => { const r = await det.detect(source); return r[0]?.rawValue || null; };
+      }
+    } catch (e) { /* on passe à ZXing */ }
+  }
+  await loadScriptOnce('vendor/zxing-library-0.21.3.min.js');
+  const Z = window.ZXing;
+  const hints = new Map();
+  const F = Z.BarcodeFormat;
+  hints.set(Z.DecodeHintType.POSSIBLE_FORMATS, [F.EAN_13, F.EAN_8, F.UPC_A, F.UPC_E, F.CODE_128, F.CODE_39, F.ITF, F.QR_CODE]);
+  hints.set(Z.DecodeHintType.TRY_HARDER, true);
+  const reader = new Z.MultiFormatReader();
+  reader.setHints(hints);
+  const canvas = document.createElement('canvas');
+  return async source => {
+    const w = source.videoWidth || source.width, h = source.videoHeight || source.height;
+    if (!w || !h) return null;
+    canvas.width = w; canvas.height = h;
+    canvas.getContext('2d', { willReadFrequently: true }).drawImage(source, 0, 0, w, h);
+    try {
+      const bmp = new Z.BinaryBitmap(new Z.HybridBinarizer(new Z.HTMLCanvasElementLuminanceSource(canvas)));
+      return reader.decode(bmp).getText();
+    } catch (e) { return null; } finally { reader.reset(); }
+  };
+}
+
+async function openCameraScanner({ title = 'Scanner', continuous = false, onCode }) {
+  const backdrop = document.createElement('div');
+  backdrop.className = 'sheet-backdrop';
+  backdrop.innerHTML = `
+    <div class="sheet" style="width:min(560px, 100%)">
+      <div class="sheet-head"><h2>${escapeHtml(title)}</h2><button class="sheet-close" type="button">✕</button></div>
+      <div class="cam-box"><video playsinline muted></video><div class="cam-aim"></div></div>
+      <div class="current-stock-hint" id="camMsg">Ouverture de la caméra…</div>${continuous ? '<div class="current-stock-hint">Pour compter deux fois le même article, sortez-le du cadre puis présentez-le à nouveau.</div>' : ''}
+      <div id="camLast"></div>
+      <button type="button" class="btn btn-ghost btn-block" id="camDone">${continuous ? 'Terminer' : 'Annuler'}</button>
+    </div>`;
+  document.body.appendChild(backdrop);
+  const video = backdrop.querySelector('video');
+  const msg = backdrop.querySelector('#camMsg');
+  let stream = null, stopped = false, timer = null, lastCode = '', lastAt = 0, count = 0;
+  const stop = () => {
+    stopped = true; clearTimeout(timer);
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    backdrop.remove();
+  };
+  backdrop.addEventListener('click', e => { if (e.target === backdrop) stop(); });
+  backdrop.querySelector('.sheet-close').addEventListener('click', stop);
+  backdrop.querySelector('#camDone').addEventListener('click', stop);
+
+  if (!navigator.mediaDevices?.getUserMedia) { msg.textContent = 'Caméra indisponible sur cet appareil. Utilisez une douchette ou saisissez le code.'; return; }
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
+  } catch (err) {
+    msg.textContent = err?.name === 'NotAllowedError'
+      ? 'Accès à la caméra refusé. Autorisez la caméra pour cette app dans les réglages, puis réessayez.'
+      : 'Impossible d\'ouvrir la caméra (' + (err?.message || err) + ').';
+    return;
+  }
+  if (stopped) { stream.getTracks().forEach(t => t.stop()); return; }
+  video.srcObject = stream;
+  try { await video.play(); } catch (e) {}
+  let decode;
+  try { decode = await makeBarcodeDecoder(); } catch (err) { msg.textContent = 'Lecteur de codes-barres indisponible : ' + err.message; return; }
+  msg.textContent = 'Placez le code-barres dans le cadre, bien éclairé, à 10-20 cm.';
+  const tick = async () => {
+    if (stopped) return;
+    let code = null;
+    try { if (video.readyState >= 2) code = await decode(video); } catch (e) { /* image suivante */ }
+    if (code && !stopped) {
+      code = normBarcode(code);
+      const now = Date.now();
+      // Même article resté devant la caméra : on ne le recompte pas. Pour en
+      // ajouter un deuxième, on retire l'article du cadre puis on le représente.
+      const sameStillVisible = code === lastCode && now - lastAt < 1200;
+      lastAt = now;
+      if (!sameStillVisible) {
+        lastCode = code;
+        if (!continuous) { stop(); onCode(code); return; }
+        count++;
+        const ok = onCode(code);
+        const name = articles[findArticleByBarcode(code)]?.name;
+        backdrop.querySelector('#camLast').innerHTML = `<div class="pos-receipt" style="display:block">${ok === false ? 'Inconnu' : '✓'} ${escapeHtml(name || code)} · ${count} scan(s)</div>`;
+        if (ok === false) { stop(); return; } // code inconnu : la fenêtre de création prend le relais
+      }
+    }
+    timer = setTimeout(tick, 120);
+  };
+  tick();
+}
+
+document.getElementById('scanArticleBtn').addEventListener('click', () =>
+  openCameraScanner({ title: 'Scanner un article', onCode: code => openScannedArticleSheet(code) }));
+
+// --- Étiquettes ---------------------------------------------------------------
+async function openLabelsSheet() {
+  const list = Object.entries(articles).sort((a, b) => a[1].name.localeCompare(b[1].name, 'fr'));
+  if (!list.length) { toast('Aucun article.'); return; }
+  const gerant = isGerant();
+  const backdrop = document.createElement('div');
+  backdrop.className = 'sheet-backdrop';
+  backdrop.innerHTML = `
+    <div class="sheet" style="width:min(760px, 100%)">
+      <div class="sheet-head"><h2>Imprimer des étiquettes</h2><button class="sheet-close" type="button">✕</button></div>
+      <div class="current-stock-hint">Planche A4 de 40 étiquettes (4 × 10, environ 45 × 26 mm) : papier autocollant ou papier ordinaire à découper. Indiquez le nombre d'étiquettes par article.</div>
+      <div class="console-toolbar">
+        <input type="search" id="lblSearch" placeholder="Rechercher un article…">
+        <select id="lblFilter"><option value="">Tous les articles</option><option value="nocode">Sans code-barres</option><option value="internal">Avec code interne</option></select>
+        <button type="button" class="btn btn-ghost" id="lblStock">Quantité = stock</button>
+        <button type="button" class="btn btn-ghost" id="lblReset">Tout à 0</button>
+      </div>
+      <div class="report-table-wrap" style="max-height:46vh; overflow:auto"><table class="report-table"><thead><tr><th>Article</th><th>Code-barres</th><th class="num">Prix</th><th class="num">Étiquettes</th></tr></thead><tbody id="lblRows"></tbody></table></div>
+      ${gerant ? '<label class="check-line"><input type="checkbox" id="lblGen" checked> Créer un code interne pour les articles sélectionnés qui n\'en ont pas</label>' : ''}
+      <label class="check-line"><input type="checkbox" id="lblPrice" checked> Afficher le prix sur l'étiquette</label>
+      <button type="button" class="btn btn-primary btn-block" id="lblPrint">Imprimer</button>
+    </div>`;
+  document.body.appendChild(backdrop);
+  const $ = q => backdrop.querySelector(q);
+  const close = () => backdrop.remove();
+  backdrop.addEventListener('click', e => { if (e.target === backdrop) close(); });
+  $('.sheet-close').addEventListener('click', close);
+  const qty = {};
+  const render = () => {
+    const q = $('#lblSearch').value.trim().toLowerCase(), f = $('#lblFilter').value;
+    $('#lblRows').innerHTML = list
+      .filter(([, a]) => (!q || a.name.toLowerCase().includes(q) || (a.barcode || '').includes(q))
+        && (!f || (f === 'nocode' ? !a.barcode : /^20\d{11}$/.test(a.barcode || ''))))
+      .map(([id, a]) => `<tr><td>${escapeHtml(a.name)}</td><td>${a.barcode ? `<span class="bc-tag">${escapeHtml(a.barcode)}</span>` : '<span class="pay-chip">aucun</span>'}</td>
+        <td class="num">${fmtFCFA(a.sell_price)}</td>
+        <td class="num"><input type="number" min="0" max="400" data-lbl="${id}" value="${qty[id] || 0}" style="width:70px; height:34px; text-align:right; border:1px solid #dde4df; border-radius:8px; padding:0 8px; font:inherit"></td></tr>`).join('')
+      || '<tr><td colspan="4" class="empty-state">Aucun article.</td></tr>';
+  };
+  $('#lblRows').addEventListener('input', e => { const id = e.target.dataset.lbl; if (id) qty[id] = Math.max(0, Math.min(400, parseInt(e.target.value) || 0)); });
+  $('#lblSearch').addEventListener('input', render);
+  $('#lblFilter').addEventListener('change', render);
+  $('#lblStock').addEventListener('click', () => { list.forEach(([id, a]) => { qty[id] = Math.max(0, Math.min(400, Number(a.qty) || 0)); }); render(); });
+  $('#lblReset').addEventListener('click', () => { Object.keys(qty).forEach(k => delete qty[k]); render(); });
+  render();
+
+  $('#lblPrint').addEventListener('click', async () => {
+    const chosen = list.filter(([id]) => qty[id] > 0);
+    if (!chosen.length) { toast('Indiquez au moins une étiquette.'); return; }
+    const btn = $('#lblPrint'); btn.disabled = true;
+    try {
+      const missing = chosen.filter(([, a]) => !a.barcode);
+      if (missing.length) {
+        if (!(gerant && $('#lblGen')?.checked)) { toast(`${missing.length} article(s) sans code-barres : cochez la création de code interne ou retirez-les.`); return; }
+        if (!isOnline()) { toast('Connexion internet nécessaire pour enregistrer les nouveaux codes.'); return; }
+        for (const [id] of missing) {
+          const code = generateInternalBarcode();
+          const { error } = await supa.from('articles').update({ barcode: code }).eq('id', id);
+          if (error) throw error;
+          articles[id].barcode = code;
+        }
+        writeCache('articles', JSON.parse(JSON.stringify(articles)));
+        renderAll();
+      }
+      await loadScriptOnce('vendor/jsbarcode-3.11.6.all.min.js');
+      const showPrice = $('#lblPrice').checked;
+      const shopName = shopInfo?.name || '';
+      const labels = [];
+      chosen.forEach(([id, a]) => { for (let i = 0; i < qty[id]; i++) labels.push(a); });
+      const svgCache = {};
+      const svgFor = code => {
+        if (svgCache[code]) return svgCache[code];
+        const el = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        const ean = isValidEan13(code);
+        window.JsBarcode(el, code, { format: ean ? 'EAN13' : 'CODE128', width: ean ? 1.4 : 1.2, height: 34, fontSize: 11, margin: 0, flat: true, displayValue: true, textMargin: 1 });
+        el.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+        el.removeAttribute('width'); el.removeAttribute('height');
+        el.setAttribute('style', 'width:100%; height:15mm');
+        return (svgCache[code] = el.outerHTML);
+      };
+      document.getElementById('printArea').innerHTML = `<div class="plabels">${labels.map(a => `
+        <div class="plabel">
+          <div class="pl-top"><span class="pl-name">${escapeHtml(a.name)}</span>${showPrice ? `<span class="pl-price">${fmtFCFA(a.sell_price)}</span>` : ''}</div>
+          ${svgFor(a.barcode)}
+          ${shopName ? `<div class="pl-shop">${escapeHtml(shopName)}</div>` : ''}
+        </div>`).join('')}</div>`;
+      close();
+      setTimeout(() => window.print(), 80);
+    } catch (err) {
+      console.error(err);
+      toast('Impression impossible : ' + (err.message || err));
+    } finally { btn.disabled = false; }
+  });
+}
+document.getElementById('labelsBtn').addEventListener('click', openLabelsSheet);
+
+// ---------------------------------------------------------------------------
 // Caisse (refonte, étape 2) : vente comptoir multi-articles en une opération.
 // Chaque ligne du panier est enregistrée par record_movement (même client,
 // même moyen de paiement) ; hors-ligne, les ventes payées sont mises en file.
@@ -4252,7 +4771,7 @@ const POS_METHODS = [['especes', 'Espèces'], ['orange_money', 'Orange Money'], 
 function posArticles() {
   const q = posQuery.trim().toLowerCase();
   return Object.entries(articles)
-    .filter(([, a]) => (!posCategory || (a.category || '') === posCategory) && (!q || (a.name || '').toLowerCase().includes(q) || (a.category || '').toLowerCase().includes(q)))
+    .filter(([, a]) => (!posCategory || (a.category || '') === posCategory) && (!q || (a.name || '').toLowerCase().includes(q) || (a.category || '').toLowerCase().includes(q) || (a.barcode || '').toLowerCase() === q))
     .sort((x, y) => {
       const ox = (Number(x[1].qty) || 0) <= 0, oy = (Number(y[1].qty) || 0) <= 0;
       return ox === oy ? x[1].name.localeCompare(y[1].name, 'fr') : (ox ? 1 : -1);
@@ -4347,15 +4866,18 @@ async function posCheckout() {
   if (!posCart.length || posBusy) return;
   const credit = posMethod === 'credit';
   if (credit && !posCustomer) { toast('Choisissez le client pour une vente à crédit.'); return; }
-  if (credit && !navigator.onLine) { toast('Vente à crédit impossible hors-ligne.'); return; }
+  if (credit && !isOnline() && creditLimitExceeded(posCustomer, posTotal())) {
+    toast(`Plafond de crédit de « ${customers[posCustomer]?.name || 'ce client'} » dépassé.`); return;
+  }
   posBusy = true; renderPos();
   const done = [];
   let queued = false;
   const snapshot = posCart.map(l => ({ ...l, name: articles[l.id].name, price: Number(articles[l.id].sell_price) || 0 }));
   try {
     for (const l of snapshot) {
-      if (credit) await recordMovement(l.id, 'vente', l.qty, posCustomer, true, null);
-      else queued = (await recordMovementTolerant(l.id, 'vente', l.qty, posCustomer || null, posMethod)) || queued;
+      // Comptant comme crédit : enregistré en direct, ou mis en file d'attente
+      // si la connexion manque (le serveur revérifie tout à la synchronisation).
+      queued = (await recordMovementTolerant(l.id, 'vente', l.qty, posCustomer || null, credit ? null : posMethod, credit)) || queued;
       done.push(l);
     }
   } catch (err) {
@@ -4417,10 +4939,18 @@ function printPosReceipt() {
   search.addEventListener('keydown', e => {
     if (e.key === 'Enter') {
       e.preventDefault();
+      // Douchette ou saisie d'un code-barres : correspondance exacte d'abord.
+      const typed = normBarcode(search.value);
+      if (typed && (findArticleByBarcode(typed) || looksLikeBarcode(typed))) {
+        search.value = ''; posQuery = '';
+        posScan(typed);
+        return;
+      }
       const first = posArticles().find(([, a]) => (Number(a.qty) || 0) > 0);
       if (first) { posAdd(first[0], 1); search.select(); }
     } else if (e.key === 'Escape') { search.value = ''; posQuery = ''; renderPos(); }
   });
+  document.getElementById('posScanBtn').addEventListener('click', () => openCameraScanner({ title: 'Scanner des articles', continuous: true, onCode: code => posScan(code) }));
   document.getElementById('posCustomer').addEventListener('change', e => { posCustomer = e.target.value; renderPos(); });
   document.getElementById('posClearBtn').addEventListener('click', () => { posCart = []; renderPos(); });
   document.getElementById('posPayBtn').addEventListener('click', posCheckout);
@@ -4582,6 +5112,137 @@ async function openLicencesSheet() {
   render();
 }
 document.getElementById('licencesBtn').addEventListener('click', openLicencesSheet);
+
+// ---------------------------------------------------------------------------
+// Console boutiques (administrateur de la plateforme)
+// ---------------------------------------------------------------------------
+// Vue d'ensemble de toutes les boutiques clientes : licence, équipe, activité,
+// chiffres de synthèse. Aucune donnée de détail d'une boutique n'est lue.
+function consoleActivity(r) {
+  if (!r.last_activity_at) return { key: 'jamais', days: Infinity, chip: '<span class="pay-chip bad">Jamais utilisée</span>' };
+  const days = Math.floor((Date.now() - new Date(r.last_activity_at)) / 86400000);
+  const when = days === 0 ? "aujourd'hui" : days === 1 ? 'hier' : `il y a ${days} j`;
+  if (days <= 2) return { key: 'active', days, chip: `<span class="pay-chip especes">${when}</span>` };
+  if (days <= 14) return { key: 'ralentie', days, chip: `<span class="pay-chip warn">${when}</span>` };
+  return { key: 'inactive', days, chip: `<span class="pay-chip bad">${when}</span>` };
+}
+
+async function openConsoleSheet() {
+  const backdrop = document.createElement('div');
+  backdrop.className = 'sheet-backdrop';
+  backdrop.innerHTML = `
+    <div class="sheet" style="width:min(1140px, 100%)">
+      <div class="sheet-head"><h2>Console boutiques</h2><button class="sheet-close" type="button">✕</button></div>
+      <div class="kpi-grid" id="conKpis"></div>
+      <div class="console-toolbar">
+        <input type="search" id="conSearch" placeholder="Rechercher une boutique, un propriétaire, un code…" aria-label="Rechercher">
+        <select id="conFilter" aria-label="Filtrer">
+          <option value="">Toutes les boutiques</option>
+          <option value="active">Actives (≤ 2 j)</option>
+          <option value="ralentie">Ralenties (3 à 14 j)</option>
+          <option value="inactive">Inactives (&gt; 14 j ou jamais)</option>
+        </select>
+        <select id="conDays" aria-label="Période des chiffres">
+          <option value="7">7 derniers jours</option>
+          <option value="30" selected>30 derniers jours</option>
+          <option value="90">90 derniers jours</option>
+        </select>
+        <button type="button" class="btn btn-ghost" id="conExport">Exporter (Excel)</button>
+      </div>
+      <div id="conList"><div class="empty-state">Chargement…</div></div>
+      <div class="current-stock-hint">Activité = dernière vente, facture ou action enregistrée dans la boutique. Ventes = ventes comptoir et caisse ; factures = factures émises (hors brouillons).</div>
+    </div>`;
+  document.body.appendChild(backdrop);
+  const close = () => backdrop.remove();
+  backdrop.addEventListener('click', e => { if (e.target === backdrop) close(); });
+  backdrop.querySelector('.sheet-close').addEventListener('click', close);
+
+  const $ = sel => backdrop.querySelector(sel);
+  let rows = [], days = 30, sortKey = 'activity', sortDir = 1;
+
+  async function load() {
+    $('#conList').innerHTML = '<div class="empty-state">Chargement…</div>';
+    if (!isOnline()) { $('#conList').innerHTML = '<div class="empty-state">La console nécessite une connexion internet.</div>'; return; }
+    const { data, error } = await supa.rpc('platform_shops_overview', { p_days: days });
+    if (error) {
+      $('#conList').innerHTML = `<div class="empty-state">${escapeHtml(/platform_shops_overview|schema cache/i.test(error.message) ? 'La migration 014 n\'est pas encore installée dans Supabase.' : error.message)}</div>`;
+      return;
+    }
+    rows = (data || []).map(r => ({ ...r, act: consoleActivity(r) }));
+    render();
+  }
+
+  function render() {
+    const n = k => rows.filter(r => r.act.key === k).length;
+    const sum = k => rows.reduce((t, r) => t + (Number(r[k]) || 0), 0);
+    const lbl = days === 7 ? '7 j' : days === 90 ? '90 j' : '30 j';
+    $('#conKpis').innerHTML = `
+      <div class="kpi"><span class="k-label">Boutiques</span><span class="k-value">${rows.length}</span><span class="k-sub">${n('active')} active(s) · ${n('ralentie')} ralentie(s)</span></div>
+      <div class="kpi"><span class="k-label">Inactives</span><span class="k-value" style="color:${n('inactive') + n('jamais') ? 'var(--bad)' : 'inherit'}">${n('inactive') + n('jamais')}</span><span class="k-sub">aucune activité depuis 14 j ou jamais</span></div>
+      <div class="kpi"><span class="k-label">Utilisateurs</span><span class="k-value">${sum('users_count')}</span><span class="k-sub">toutes boutiques</span></div>
+      <div class="kpi"><span class="k-label">Volume d'affaires (${lbl})</span><span class="k-value">${fmtFCFA(sum('sales_amount') + sum('invoices_amount'))}</span><span class="k-sub">${sum('sales_count')} ventes · ${sum('invoices_count')} factures</span></div>`;
+
+    const q = $('#conSearch').value.trim().toLowerCase();
+    const f = $('#conFilter').value;
+    let list = rows.filter(r => !q || [r.shop_name, r.owner_name, r.owner_email, r.licence_code].some(v => String(v || '').toLowerCase().includes(q)));
+    if (f) list = list.filter(r => f === 'inactive' ? ['inactive', 'jamais'].includes(r.act.key) : r.act.key === f);
+    const val = {
+      name: r => String(r.shop_name || '').toLowerCase(),
+      users: r => r.users_count, articles: r => r.articles_count,
+      sales: r => Number(r.sales_amount) || 0, invoices: r => Number(r.invoices_amount) || 0,
+      activity: r => r.act.days, backup: r => r.last_backup_at ? -new Date(r.last_backup_at) : Infinity,
+    }[sortKey];
+    list.sort((a, b) => (val(a) < val(b) ? -1 : val(a) > val(b) ? 1 : 0) * sortDir);
+    if (!list.length) { $('#conList').innerHTML = `<div class="empty-state">${rows.length ? 'Aucune boutique ne correspond.' : 'Aucune boutique pour l\'instant.'}</div>`; return; }
+    const th = (k, label, cls = '') => `<th class="${cls}" data-sort="${k}">${label}${sortKey === k ? (sortDir === 1 ? ' ↑' : ' ↓') : ''}</th>`;
+    const backup = r => {
+      if (!r.last_backup_at) return '<span class="pay-chip">Jamais</span>';
+      const d = Math.floor((Date.now() - new Date(r.last_backup_at)) / 86400000);
+      return d > 30 ? `<span class="pay-chip warn">${fmtDate(r.last_backup_at)}</span>` : fmtDate(r.last_backup_at);
+    };
+    $('#conList').innerHTML = `<div class="report-table-wrap"><table class="report-table">
+      <thead><tr>${th('name', 'Boutique')}<th>Licence</th>${th('users', 'Utilis.', 'num')}${th('articles', 'Articles', 'num')}${th('sales', 'Ventes', 'num')}${th('invoices', 'Factures', 'num')}${th('activity', 'Activité')}${th('backup', 'Sauvegarde')}</tr></thead>
+      <tbody>${list.map(r => `<tr>
+        <td><strong>${escapeHtml(r.shop_name || 'Sans nom')}</strong><div class="current-stock-hint">${escapeHtml([r.owner_name, r.owner_email].filter(Boolean).join(' · ') || 'Aucun propriétaire')}</div></td>
+        <td style="white-space:nowrap">${r.licence_code ? `<span style="font-family:var(--font-mono)">${escapeHtml(r.licence_code)}</span><div class="current-stock-hint">activée le ${fmtDate(r.activated_at)}</div>` : '<span class="pay-chip">Sans code</span>'}</td>
+        <td class="num">${r.users_count}</td>
+        <td class="num">${r.articles_count}</td>
+        <td class="num">${fmtFCFA(r.sales_amount)}<div class="current-stock-hint">${r.sales_count} vente(s)</div></td>
+        <td class="num">${fmtFCFA(r.invoices_amount)}<div class="current-stock-hint">${r.invoices_count} facture(s)</div></td>
+        <td style="white-space:nowrap">${r.act.chip}${r.last_login_at ? `<div class="current-stock-hint">connexion ${fmtDate(r.last_login_at)}</div>` : ''}</td>
+        <td style="white-space:nowrap">${backup(r)}</td>
+      </tr>`).join('')}</tbody></table></div>`;
+  }
+
+  $('#conList').addEventListener('click', e => {
+    const h = e.target.closest('[data-sort]');
+    if (!h) return;
+    if (sortKey === h.dataset.sort) sortDir = -sortDir;
+    else { sortKey = h.dataset.sort; sortDir = ['sales', 'invoices', 'users', 'articles'].includes(sortKey) ? -1 : 1; }
+    render();
+  });
+  $('#conSearch').addEventListener('input', render);
+  $('#conFilter').addEventListener('change', render);
+  $('#conDays').addEventListener('change', e => { days = Number(e.target.value) || 30; load(); });
+  $('#conExport').addEventListener('click', () => {
+    if (typeof XLSX === 'undefined' || !rows.length) { toast('Rien à exporter.'); return; }
+    const out = rows.map(r => ({
+      'Boutique': r.shop_name || '', 'Propriétaire': r.owner_name || '', 'Email': r.owner_email || '',
+      'Code licence': r.licence_code || '', 'Activée le': r.activated_at ? fmtDate(r.activated_at) : '',
+      'Utilisateurs': r.users_count, 'Articles': r.articles_count,
+      [`Ventes (${days} j)`]: r.sales_count, [`Montant ventes (${days} j)`]: Number(r.sales_amount) || 0,
+      [`Factures (${days} j)`]: r.invoices_count, [`Montant factures (${days} j)`]: Number(r.invoices_amount) || 0,
+      'Dernière activité': r.last_activity_at ? fmtDate(r.last_activity_at) : 'Jamais',
+      'Dernière connexion': r.last_login_at ? fmtDate(r.last_login_at) : '',
+      'Dernière sauvegarde': r.last_backup_at ? fmtDate(r.last_backup_at) : 'Jamais',
+    }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(out), 'Boutiques');
+    XLSX.writeFile(wb, `console-boutiques-${new Date().toISOString().slice(0, 10)}.xlsx`);
+  });
+  load();
+}
+document.getElementById('consoleBtn').addEventListener('click', openConsoleSheet);
 
 // ---------------------------------------------------------------------------
 // Retours & remboursements (module 5)
@@ -4838,7 +5499,7 @@ function openReturnEditor(sourceInvoiceId = null) {
     const type = document.getElementById('retRefundType').value;
     const amount = type === 'aucun' ? 0 : Number(document.getElementById('retAmount').value);
     if (type !== 'aucun' && !(amount > 0)) { errEl.textContent = 'Indiquez un montant positif.'; return; }
-    if (!navigator.onLine) { errEl.textContent = 'Les retours nécessitent une connexion internet.'; return; }
+    if (!isOnline()) { errEl.textContent = 'Les retours nécessitent une connexion internet.'; return; }
 
     const btn = e.target.querySelector('button[type="submit"]');
     btn.disabled = true;
@@ -5170,7 +5831,7 @@ function applyRoleToUI() {
 // ---------------------------------------------------------------------------
 // Movement sheet
 // ---------------------------------------------------------------------------
-function openMoveSheet(preselectId) {
+function openMoveSheet(preselectId, initialType) {
   if (Object.keys(articles).length === 0) {
     toast("Ajoutez d'abord un article dans l'onglet Articles.");
     return;
@@ -5259,6 +5920,8 @@ function openMoveSheet(preselectId) {
     });
   });
   updateCustomerFieldsVisibility();
+  if (initialType && initialType !== 'vente') setTimeout(() => backdrop.querySelector(`.move-type-btn[data-type="${initialType}"]`)?.click(), 0);
+  if (initialType) setTimeout(() => { const q = document.getElementById('moveQty'); q?.focus(); q?.select(); }, 30);
 
   const articleSelect = document.getElementById('moveArticle');
   const qtyInput = document.getElementById('moveQty');
@@ -5295,14 +5958,18 @@ function openMoveSheet(preselectId) {
     submitBtn.disabled = true;
     try {
       // Réassort : toujours en ligne (réservé au gérant, moins urgent à enregistrer immédiatement).
-      // Vente à crédit : toujours en ligne aussi — le solde client doit rester fiable,
-      // pas d'estimation optimiste hors-ligne pour l'argent dû.
-      // Vente au comptant / Perte : tolère l'absence de réseau, mise en file d'attente locale.
-      if (activeType === 'reassort' || onCredit) {
-        await recordMovement(articleId, activeType, qty, customerId, !!onCredit, saleMethod);
+      // Vente (comptant ou crédit) / Perte : tolère l'absence de réseau, mise en file
+      // d'attente locale ; le serveur revérifie stock et plafond à la synchronisation.
+      if (activeType === 'reassort') {
+        await recordMovement(articleId, activeType, qty, customerId, false, saleMethod);
         toast('Mouvement enregistré.');
       } else {
-        const wentOffline = await recordMovementTolerant(articleId, activeType, qty, customerId, saleMethod);
+        if (onCredit && !isOnline() && creditLimitExceeded(customerId, qty * (Number(a.sell_price) || 0))) {
+          toast(`Plafond de crédit de « ${customers[customerId]?.name || 'ce client'} » dépassé.`);
+          submitBtn.disabled = false;
+          return;
+        }
+        const wentOffline = await recordMovementTolerant(articleId, activeType, qty, customerId, saleMethod, !!onCredit);
         toast(wentOffline ? 'Hors-ligne : vente enregistrée, en attente de synchronisation.' : 'Mouvement enregistré.');
       }
       backdrop.remove();
@@ -5318,7 +5985,7 @@ document.getElementById('fabMove').addEventListener('click', () => openMoveSheet
 // ---------------------------------------------------------------------------
 // Article create/edit sheet
 // ---------------------------------------------------------------------------
-function openArticleSheet(id) {
+function openArticleSheet(id, prefill = {}) {
   if (!isGerant()) {
     toast("Seul le gérant peut gérer les articles.");
     return;
@@ -5331,6 +5998,14 @@ function openArticleSheet(id) {
       <div class="sheet-head"><h2>${existing ? 'Modifier l’article' : 'Nouvel article'}</h2><button class="sheet-close" id="closeArtSheet">✕</button></div>
       <form id="articleForm">
         <div class="field"><label for="artName">Nom</label><input id="artName" required value="${existing ? escapeHtml(existing.name) : ''}" placeholder="Ex : Écouteurs Bluetooth XR200"></div>
+        <div class="field"><label for="artBarcode">Code-barres</label>
+          <div class="barcode-row">
+            <input id="artBarcode" autocomplete="off" inputmode="text" value="${escapeHtml(existing?.barcode || prefill.barcode || '')}" placeholder="Scannez ou saisissez le code">
+            <button type="button" class="scan-btn" id="artBarcodeScan" title="Scanner avec la caméra" aria-label="Scanner avec la caméra">${SCAN_ICON}</button>
+            <button type="button" class="btn btn-ghost" id="artBarcodeGen" title="Pour un produit sans code-barres : crée un code interne à imprimer sur une étiquette">Générer</button>
+          </div>
+          <div class="current-stock-hint">Avec une douchette, cliquez dans le champ puis scannez le produit. Sans code-barres d'origine, « Générer » crée un code interne à imprimer sur une étiquette.</div>
+        </div>
         <div class="field"><label for="artCategory">Catégorie</label><input id="artCategory" value="${existing ? escapeHtml(existing.category || '') : ''}" placeholder="Ex : Écouteurs"></div>
         <div class="field"><label for="artQty">Quantité en stock</label><input id="artQty" type="number" min="0" inputmode="numeric" value="${existing ? (existing.qty ?? 0) : 0}"></div>
         <div class="field"><label for="artBuy">Prix d'achat (FCFA)</label><input id="artBuy" type="number" min="0" inputmode="numeric" value="${existing ? (existing.buy_price ?? '') : ''}"></div>
@@ -5345,9 +6020,24 @@ function openArticleSheet(id) {
   backdrop.addEventListener('click', (e) => { if (e.target === backdrop) backdrop.remove(); });
   document.getElementById('closeArtSheet').addEventListener('click', () => backdrop.remove());
 
+  const barcodeInput = document.getElementById('artBarcode');
+  // La douchette envoie « Entrée » après le code : on ne valide pas le formulaire pour autant.
+  barcodeInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('artCategory').focus(); } });
+  document.getElementById('artBarcodeScan').addEventListener('click', () =>
+    openCameraScanner({ title: 'Scanner le code-barres', onCode: code => { barcodeInput.value = code; } }));
+  document.getElementById('artBarcodeGen').addEventListener('click', () => {
+    if (barcodeInput.value.trim() && !confirmTwice(document.getElementById('artBarcodeGen'), 'Remplacer ?')) return;
+    barcodeInput.value = generateInternalBarcode();
+  });
+  if (!existing && prefill.barcode) setTimeout(() => document.getElementById('artName').focus(), 0);
+
   document.getElementById('articleForm').addEventListener('submit', async (e) => {
     e.preventDefault();
+    const barcode = normBarcode(barcodeInput.value) || null;
+    const clash = barcode && Object.entries(articles).find(([aid, a]) => aid !== id && a.barcode === barcode);
+    if (clash) { toast(`Ce code-barres est déjà utilisé par « ${clash[1].name} ».`); barcodeInput.focus(); return; }
     const payload = {
+      barcode,
       name: document.getElementById('artName').value.trim(),
       category: document.getElementById('artCategory').value.trim(),
       qty: parseInt(document.getElementById('artQty').value) || 0,
@@ -5368,7 +6058,7 @@ function openArticleSheet(id) {
       toast('Article enregistré.');
     } catch (err) {
       console.error(err);
-      toast("Erreur lors de l'enregistrement.");
+      toast(err?.code === '23505' || /barcode/i.test(err?.message || '') ? 'Ce code-barres est déjà utilisé par un autre article de la boutique.' : "Erreur lors de l'enregistrement.");
     }
   });
 
@@ -5398,6 +6088,7 @@ function buildWorkbook() {
     .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
     .map(a => ({
       'Article': a.name,
+      'Code-barres': a.barcode || '',
       'Catégorie': a.category || '',
       'Quantité en stock': a.qty ?? 0,
       'Prix d\'achat (FCFA)': a.buy_price ?? 0,
@@ -5464,6 +6155,7 @@ function parseImportRows(rawRows) {
       buy_price: toNum(pickCol(row, ['prix d\'achat', 'prix d\'achat (fcfa)', 'prix achat']), 0),
       sell_price: toNum(pickCol(row, ['prix de vente', 'prix de vente (fcfa)', 'prix vente']), 0),
       threshold: toNum(pickCol(row, ['seuil alerte', 'seuil', 'seuil d\'alerte stock bas']), 3),
+      barcode: normBarcode(String(pickCol(row, ['code-barres', 'code barres', 'code-barre', 'code barre', 'ean', 'barcode', 'gencod']) ?? '')) || null,
     };
   }).filter(r => r.name);
 }
@@ -5473,7 +6165,8 @@ function openImportSheet(parsedRows) {
   Object.entries(articles).forEach(([id, a]) => { byNameLower[a.name.trim().toLowerCase()] = id; });
 
   const plan = parsedRows.map(r => {
-    const existingId = byNameLower[r.name.toLowerCase()];
+    // Le code-barres identifie l'article en priorité, puis le nom.
+    const existingId = (r.barcode && findArticleByBarcode(r.barcode)) || byNameLower[r.name.toLowerCase()];
     return { ...r, existingId, action: existingId ? 'update' : 'new' };
   });
 
@@ -5512,6 +6205,7 @@ function openImportSheet(parsedRows) {
           const { error } = await supa.from('articles').update({
             category: p.category, qty: p.qty, buy_price: p.buy_price,
             sell_price: p.sell_price, threshold: p.threshold,
+            ...(p.barcode ? { barcode: p.barcode } : {}),
           }).eq('id', p.existingId);
           if (error) throw error;
           if (p.qty > 0) await recordMovement(p.existingId, 'reassort', p.qty);
@@ -5521,6 +6215,7 @@ function openImportSheet(parsedRows) {
           const { data, error } = await supa.from('articles').insert({
             name: p.name, category: p.category, qty: 0,
             buy_price: p.buy_price, sell_price: p.sell_price, threshold: p.threshold,
+            barcode: p.barcode || null,
           }).select('id').single();
           if (error) throw error;
           if (p.qty > 0 && data?.id) await recordMovement(data.id, 'reassort', p.qty);
@@ -5593,120 +6288,296 @@ async function recordMovement(articleId, type, qty, customerId = null, onCredit 
 // échoue pour une raison réseau), le mouvement est mis en file d'attente locale
 // et appliqué à l'affichage de façon optimiste (le stock réel sera recalé dès
 // la synchronisation). Retourne true si le mouvement est parti en hors-ligne.
-async function recordMovementTolerant(articleId, type, qty, customerId = null, method = null) {
-  if (navigator.onLine) {
+async function recordMovementTolerant(articleId, type, qty, customerId = null, method = null, onCredit = false) {
+  if (isOnline()) {
     try {
-      await recordMovement(articleId, type, qty, customerId, false, method);
+      await recordMovement(articleId, type, qty, customerId, !!onCredit, method);
       return false;
     } catch (err) {
       // Si l'erreur ne ressemble pas à un problème réseau (ex: refusé par le serveur), on la relance.
       if (!isLikelyNetworkError(err)) throw err;
     }
   }
-  await queueOfflineMovement(articleId, type, qty, customerId, method);
+  await queueOfflineMovement(articleId, type, qty, customerId, method, onCredit);
   return true;
 }
 
 function isLikelyNetworkError(err) {
   const msg = String(err?.message || err || '').toLowerCase();
-  return !navigator.onLine || msg.includes('fetch') || msg.includes('network') || msg.includes('failed to fetch');
+  return !navigator.onLine || msg.includes('fetch') || msg.includes('network') || msg.includes('failed to fetch')
+    || msg.includes('load failed') || msg.includes('timeout') || msg.includes('timed out');
 }
 
-async function queueOfflineMovement(articleId, type, qty, customerId = null, method = null) {
+// Pendant la synchronisation : distingue une erreur passagère (réseau, session à
+// renouveler, serveur indisponible) — on réessaiera plus tard — d'un refus réel
+// du serveur (stock insuffisant, plafond de crédit, article supprimé…) qu'il
+// faut montrer au gérant pour correction.
+function isRetryableSyncError(err) {
+  if (isLikelyNetworkError(err)) return true;
+  const msg = String(err?.message || err || '').toLowerCase();
+  const status = Number(err?.status || err?.code || 0);
+  return msg.includes('jwt') || msg.includes('token') || status === 401 || status >= 500;
+}
+
+// Contrôle local du plafond de crédit d'un client, avant une vente à crédit hors-ligne
+// (le serveur refera le contrôle à la synchronisation).
+function creditLimitExceeded(customerId, amount) {
+  const c = customers[customerId];
+  if (!c) return false;
+  const limit = Number(c.credit_limit) || 0;
+  if (limit <= 0) return false;
+  return (Number(c.credit_balance) || 0) + amount > limit;
+}
+
+async function queueOfflineMovement(articleId, type, qty, customerId = null, method = null, onCredit = false) {
   markActivity();
+  const price = Number(articles[articleId]?.sell_price) || 0;
   const entry = {
     localId: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     article_id: articleId,
+    article_name: articles[articleId]?.name || '',
     type,
     qty,
     customer_id: customerId,
-    payment_method: method,
+    customer_name: customerId ? (customers[customerId]?.name || '') : '',
+    on_credit: !!onCredit,
+    amount: qty * price,
+    payment_method: onCredit ? null : method,
     by_name: currentProfile?.display_name || currentProfile?.email || 'inconnu',
     created_at: new Date().toISOString(),
   };
   await addPendingMovement(entry);
 
-  // Mise à jour optimiste de l'affichage local (stock + liste des mouvements),
+  // Mise à jour optimiste de l'affichage local (stock, solde client, mouvements),
   // sans attendre la synchronisation.
   const a = articles[articleId];
   if (a) {
     a.qty = (a.qty ?? 0) - qty; // vente/perte retirent toujours du stock
   }
-  movements.unshift({
+  if (entry.on_credit && customers[customerId]) {
+    customers[customerId].credit_balance = (Number(customers[customerId].credit_balance) || 0) + entry.amount;
+  }
+  movements.unshift(pendingToMovement(entry));
+  updatePendingBadge();
+  renderAll();
+  if (entry.on_credit) renderCustomers();
+}
+
+function pendingToMovement(entry) {
+  return {
     id: 'pending-' + entry.localId,
-    article_id: articleId,
-    type,
-    qty,
-    customer_id: customerId,
+    article_id: entry.article_id,
+    type: entry.type,
+    qty: entry.qty,
+    customer_id: entry.customer_id ?? null,
+    on_credit: !!entry.on_credit,
     by_name: entry.by_name,
     at: entry.created_at,
     pending: true,
-  });
-  updatePendingBadge();
-  renderAll();
+  };
 }
 
 async function syncPendingMovements() {
   if (syncInProgress || !navigator.onLine) return;
   syncInProgress = true;
+  let newlyFailed = 0;
   try {
-    const pending = await getPendingMovements();
+    const all = await getPendingMovements();
+    const pending = all.filter(e => !e.failed);
     if (pending.length === 0) { updatePendingBadge(); return; }
+    // Renouvelle la session si elle a expiré pendant la coupure.
+    try { await supa.auth.getSession(); } catch (e) { /* on tente quand même */ }
     pending.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
     for (const entry of pending) {
       try {
-        await recordMovement(entry.article_id, entry.type, entry.qty, entry.customer_id ?? null, false, entry.payment_method ?? null);
+        await recordMovement(entry.article_id, entry.type, entry.qty, entry.customer_id ?? null, !!entry.on_credit, entry.payment_method ?? null);
         await removePendingMovement(entry.localId);
       } catch (err) {
         console.error('Échec synchronisation mouvement en attente:', err);
-        // On s'arrête ici : on réessaiera au prochain déclenchement (reconnexion suivante),
-        // pour garder l'ordre des mouvements.
-        break;
+        if (isRetryableSyncError(err)) {
+          // Problème passager : on s'arrête et on réessaiera à la prochaine reconnexion,
+          // en gardant l'ordre des mouvements.
+          break;
+        }
+        // Refus réel du serveur : l'opération est mise de côté « à corriger »
+        // et la synchronisation continue avec les suivantes.
+        entry.failed = true;
+        entry.error = err.message || 'Refusé par le serveur';
+        entry.failed_at = new Date().toISOString();
+        await updatePendingMovement(entry);
+        newlyFailed++;
       }
     }
-    // Recharge l'état réel depuis le serveur (corrige toute estimation optimiste,
-    // y compris un stock négatif resté affiché le temps de la synchro).
+    // Recharge l'état réel depuis le serveur (corrige toute estimation optimiste).
     await loadArticles();
     await loadMovements();
+    if (pending.some(e => e.on_credit)) await loadCustomers();
   } finally {
     syncInProgress = false;
     updatePendingBadge();
   }
+  if (newlyFailed) {
+    toast(`${newlyFailed} opération${newlyFailed > 1 ? 's' : ''} hors-ligne refusée${newlyFailed > 1 ? 's' : ''} par le serveur — cliquez sur « à corriger » en haut de l'écran.`);
+  }
 }
 
 function updatePendingBadge() {
-  getPendingMovements().then((pending) => {
-    pendingCount = pending.length;
+  getPendingMovements().then((all) => {
+    const failed = all.filter(e => e.failed).length;
+    pendingCount = all.length - failed;
     const el = document.getElementById('pendingBadge');
     if (el) {
       el.hidden = pendingCount === 0;
       el.textContent = pendingCount === 1 ? '1 en attente' : `${pendingCount} en attente`;
     }
+    const fb = document.getElementById('failedBadge');
+    if (fb) {
+      fb.hidden = failed === 0 || !currentProfile;
+      fb.textContent = failed === 1 ? '1 à corriger' : `${failed} à corriger`;
+    }
   }).catch(() => {});
 }
+
+// ---------------------------------------------------------------------------
+// Opérations hors-ligne refusées à la synchronisation
+// ---------------------------------------------------------------------------
+async function openFailedSheet() {
+  const backdrop = document.createElement('div');
+  backdrop.className = 'sheet-backdrop';
+  backdrop.innerHTML = `
+    <div class="sheet">
+      <div class="sheet-head"><h2>Opérations à corriger</h2><button class="sheet-close" id="closeFailedSheet">✕</button></div>
+      <p class="fail-hint" style="margin:0 0 12px">Ces ventes ou pertes ont été saisies sans connexion, puis refusées par le serveur au moment de la synchronisation (souvent : stock épuisé entre-temps sur un autre poste, ou plafond de crédit dépassé).<br>
+      Si l'article a vraiment été vendu, corrigez d'abord le stock (réassort ou modification de l'article) puis cliquez sur <strong>Réessayer</strong>. Sinon, <strong>Annuler</strong> la supprime définitivement.</p>
+      <div id="failedList"></div>
+    </div>`;
+  document.body.appendChild(backdrop);
+  const close = () => backdrop.remove();
+  backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(); });
+  document.getElementById('closeFailedSheet').addEventListener('click', close);
+
+  async function render() {
+    const failed = (await getPendingMovements()).filter(e => e.failed)
+      .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    const host = document.getElementById('failedList');
+    if (!host) return;
+    if (!failed.length) { host.innerHTML = '<div class="empty-state">Plus rien à corriger.</div>'; return; }
+    const canFix = isGerant();
+    host.innerHTML = failed.map(e => {
+      const name = articles[e.article_id]?.name || e.article_name || 'Article supprimé';
+      const what = e.type === 'perte' ? 'Perte' : (e.on_credit ? 'Vente à crédit' : 'Vente');
+      const cust = e.customer_id ? (customers[e.customer_id]?.name || e.customer_name || '') : '';
+      const when = new Date(e.created_at).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
+      return `<div class="failed-item" style="border:1px solid var(--border); border-radius:10px; padding:10px 12px; margin-bottom:8px">
+        <div style="display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap">
+          <strong>${escapeHtml(what)} · ${e.qty} × ${escapeHtml(name)}</strong>
+          <span class="fail-hint">${escapeHtml(when)} · ${escapeHtml(e.by_name || '')}</span>
+        </div>
+        ${cust ? `<div class="fail-hint">Client : ${escapeHtml(cust)}${e.amount ? ' · ' + fmtFCFA(e.amount) : ''}</div>` : (e.amount ? `<div class="fail-hint">${fmtFCFA(e.amount)}${e.payment_method ? ' · ' + escapeHtml(PAY_METHODS[e.payment_method] || e.payment_method) : ''}</div>` : '')}
+        <div style="color:var(--bad); font-size:13px; margin-top:4px">Motif : ${escapeHtml(e.error || 'refusé')}</div>
+        <div style="display:flex; gap:8px; margin-top:8px; justify-content:flex-end">
+          ${canFix ? `<button type="button" class="btn btn-ghost" data-cancel="${e.localId}">Annuler</button>` : ''}
+          <button type="button" class="btn btn-primary" data-retry="${e.localId}">Réessayer</button>
+        </div>
+      </div>`;
+    }).join('') + (canFix ? '' : '<p class="fail-hint">Seul le gérant peut annuler une opération. Prévenez-le.</p>');
+
+    host.querySelectorAll('[data-retry]').forEach(btn => btn.addEventListener('click', async () => {
+      const e = failed.find(x => x.localId === btn.dataset.retry);
+      if (!e) return;
+      if (!isOnline()) { toast('Pas de connexion : réessayez quand internet est revenu.'); return; }
+      btn.disabled = true;
+      try {
+        await recordMovement(e.article_id, e.type, e.qty, e.customer_id ?? null, !!e.on_credit, e.payment_method ?? null);
+        await removePendingMovement(e.localId);
+        toast('Opération enregistrée.');
+        await loadArticles(); await loadMovements();
+        if (e.on_credit) await loadCustomers();
+      } catch (err) {
+        console.error(err);
+        e.error = err.message || e.error;
+        await updatePendingMovement(e);
+        toast('Toujours refusée : ' + (err.message || 'erreur'));
+      }
+      updatePendingBadge();
+      render();
+    }));
+    host.querySelectorAll('[data-cancel]').forEach(btn => btn.addEventListener('click', async () => {
+      const e = failed.find(x => x.localId === btn.dataset.cancel);
+      if (!e) return;
+      if (btn.dataset.confirm !== '1') {
+        btn.dataset.confirm = '1';
+        btn.textContent = 'Confirmer l\'annulation';
+        btn.classList.add('btn-danger');
+        return;
+      }
+      await removePendingMovement(e.localId);
+      toast('Opération annulée.');
+      updatePendingBadge();
+      render();
+    }));
+  }
+  render();
+}
+document.getElementById('failedBadge').addEventListener('click', openFailedSheet);
 
 function updateOnlineStatus() {
   const pill = document.getElementById('offlineStatus');
   if (!pill) return;
-  pill.hidden = navigator.onLine;
+  pill.hidden = isOnline() || !currentProfile;
+  const label = document.getElementById('offlineLabel');
+  if (label) label.textContent = navigator.onLine ? 'Pas d\'internet' : 'Hors-ligne';
 }
 
-window.addEventListener('online', () => { updateOnlineStatus(); syncPendingMovements(); });
+function onConnectionBack() {
+  if (!currentProfile?.shop_id) return;
+  syncPendingMovements();
+  refreshAfterReconnect();
+}
+
+window.addEventListener('online', () => { updateOnlineStatus(); probeServer().then(ok => { if (ok) onConnectionBack(); }); });
 window.addEventListener('offline', () => { updateOnlineStatus(); });
 
-const DATA_CACHE_KEY = 'boutique-stock-data-cache';
-
-function cacheData() {
+// Tant que le serveur est injoignable, on teste la connexion toutes les 20 s
+// pour reprendre la synchronisation dès que possible.
+async function probeServer() {
+  if (!navigator.onLine) return false;
   try {
-    localStorage.setItem(DATA_CACHE_KEY, JSON.stringify({ articles, movements }));
-  } catch (err) { /* stockage indisponible : tant pis, pas bloquant */ }
+    const res = await fetchWithTimeout(`${window.SUPABASE_URL}/auth/v1/health`, { headers: { apikey: window.SUPABASE_ANON_KEY } });
+    if (res.status < 500) { setServerReachable(true); return true; }
+  } catch (err) { /* toujours injoignable */ }
+  return false;
+}
+setInterval(() => { if (!serverReachable && currentProfile) probeServer(); }, 20000);
+
+// Au retour de la connexion : recharge ce qui n'avait pas pu l'être hors-ligne.
+let lastReconnectRefresh = 0;
+function refreshAfterReconnect() {
+  if (!currentProfile?.shop_id || Date.now() - lastReconnectRefresh < 30000) return;
+  lastReconnectRefresh = Date.now();
+  setTimeout(() => {
+    if (!navigator.onLine) return;
+    loadCustomers();
+    loadSalesDocuments();
+    loadReturns();
+    loadPurchasing();
+    loadDeliveries();
+    loadShopInfo().then(loadTreasury);
+    subscribeRealtime();
+  }, 1500);
 }
 
-function readCachedData() {
+function isOfflineError(error) {
+  return !isOnline() || isLikelyNetworkError(error);
+}
+
+// Ancien cache (localStorage, versions précédentes de l'app) : lu seulement en
+// dernier recours, s'il n'y a encore rien dans le nouveau cache.
+const DATA_CACHE_KEY = 'boutique-stock-data-cache';
+function readLegacyCachedData() {
   try {
     const raw = localStorage.getItem(DATA_CACHE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw);
+    return raw ? JSON.parse(raw) : null;
   } catch (err) {
     return null;
   }
@@ -5716,10 +6587,10 @@ async function loadArticles() {
   const { data, error } = await supa.from('articles').select('*').order('name');
   if (error) {
     console.error(error);
-    if (!navigator.onLine || isLikelyNetworkError(error)) {
-      const cached = readCachedData();
-      if (cached?.articles && Object.keys(articles).length === 0) {
-        articles = cached.articles;
+    if (isOfflineError(error) && Object.keys(articles).length === 0) {
+      const cached = (await readCache('articles')) || readLegacyCachedData()?.articles;
+      if (cached) {
+        articles = cached;
         await reapplyPendingMovements();
         renderAll();
       }
@@ -5731,21 +6602,22 @@ async function loadArticles() {
     articles[row.id] = {
       name: row.name, category: row.category, qty: row.qty,
       buy_price: row.buy_price, sell_price: row.sell_price, threshold: row.threshold,
+      barcode: row.barcode || null,
     };
   });
+  writeCache('articles', JSON.parse(JSON.stringify(articles)));
   await reapplyPendingMovements();
   renderAll();
-  cacheData();
 }
 
 async function loadMovements() {
   const { data, error } = await supa.from('movements').select('*').order('at', { ascending: false }).limit(200);
   if (error) {
     console.error(error);
-    if (!navigator.onLine || isLikelyNetworkError(error)) {
-      const cached = readCachedData();
-      if (cached?.movements && movements.length === 0) {
-        movements = cached.movements;
+    if (isOfflineError(error) && movements.length === 0) {
+      const cached = (await readCache('movements')) || readLegacyCachedData()?.movements;
+      if (cached) {
+        movements = cached;
         await reapplyPendingMovements();
         renderAll();
       }
@@ -5753,15 +6625,24 @@ async function loadMovements() {
     return;
   }
   movements = data || [];
+  writeCache('movements', movements);
   await reapplyPendingMovements();
   renderAll();
-  cacheData();
 }
 
 async function loadCustomers() {
   const { data, error } = await supa.from('customers').select('*').order('name');
   if (error) {
     console.error(error);
+    if (isOfflineError(error) && Object.keys(customers).length === 0) {
+      const cached = await readCache('customers');
+      if (cached) {
+        customers = cached;
+        await reapplyPendingCredit();
+        renderCustomers();
+        if (typeof renderPos === 'function') renderPos();
+      }
+    }
     return;
   }
   customers = {};
@@ -5772,16 +6653,19 @@ async function loadCustomers() {
       notes: row.notes,
     };
   });
+  writeCache('customers', JSON.parse(JSON.stringify(customers)));
+  await reapplyPendingCredit();
   renderCustomers();
 }
 
 // Réapplique par-dessus l'état serveur les mouvements encore en file d'attente
 // locale (pas encore synchronisés), pour que l'affichage reste cohérent même
 // si un chargement serveur intervient pendant que l'app est hors-ligne.
+// Les opérations refusées (« à corriger ») ne sont pas réappliquées.
 async function reapplyPendingMovements() {
   let pending = [];
   try {
-    pending = await getPendingMovements();
+    pending = (await getPendingMovements()).filter(e => !e.failed);
   } catch (err) {
     console.error(err);
     return;
@@ -5792,18 +6676,36 @@ async function reapplyPendingMovements() {
     const a = articles[entry.article_id];
     if (a) a.qty = (a.qty ?? 0) - entry.qty;
     const alreadyShown = movements.some((m) => m.id === 'pending-' + entry.localId);
-    if (!alreadyShown) {
-      movements.unshift({
-        id: 'pending-' + entry.localId,
-        article_id: entry.article_id,
-        type: entry.type,
-        qty: entry.qty,
-        customer_id: entry.customer_id ?? null,
-        by_name: entry.by_name,
-        at: entry.created_at,
-        pending: true,
-      });
-    }
+    if (!alreadyShown) movements.unshift(pendingToMovement(entry));
+  }
+}
+
+// Affiche tout de suite les données enregistrées sur le poste (démarrage
+// rapide, et seul moyen d'avoir des données quand internet est coupé) ;
+// les chargements serveur les remplacent dès qu'ils répondent.
+async function hydrateFromCache() {
+  const [a, m, c, d, sh] = await Promise.all(['articles', 'movements', 'customers', 'sales_documents', 'shop'].map(readCache));
+  let stockSet = false, custSet = false;
+  if (a && !Object.keys(articles).length) { articles = a; stockSet = true; }
+  if (m && !movements.length) { movements = m; stockSet = true; }
+  if (c && !Object.keys(customers).length) { customers = c; custSet = true; }
+  if (sh && !shopInfo) { shopInfo = sh; updateSidebarShop(); }
+  if (d && !Object.keys(salesDocs).length) { setSalesDocs(d); renderSalesDocs(); }
+  if (stockSet) await reapplyPendingMovements();
+  if (custSet) await reapplyPendingCredit();
+  if (stockSet) renderAll();
+  if (custSet || d) renderCustomers();
+  if (stockSet || custSet || d) renderDashboard();
+}
+
+async function reapplyPendingCredit() {
+  let pending = [];
+  try {
+    pending = (await getPendingMovements()).filter(e => !e.failed && e.on_credit);
+  } catch (err) { return; }
+  for (const e of pending) {
+    const c = customers[e.customer_id];
+    if (c) c.credit_balance = (Number(c.credit_balance) || 0) + (Number(e.amount) || 0);
   }
 }
 
@@ -5877,6 +6779,7 @@ function showLogin() {
   document.getElementById('teamBtn').hidden = true;
   document.getElementById('securityBtn').hidden = true;
   document.getElementById('licencesBtn').hidden = true;
+  document.getElementById('consoleBtn').hidden = true;
   document.getElementById('app').hidden = true;
   document.getElementById('fabMove').hidden = true;
   document.getElementById('whoLabel').textContent = 'Non connecté';
@@ -5896,6 +6799,7 @@ function showLogin() {
   document.getElementById('fixedPanel-articles').hidden = true;
   document.getElementById('offlineStatus').hidden = true;
   document.getElementById('pendingBadge').hidden = true;
+  document.getElementById('failedBadge').hidden = true;
   // Écrans de connexion / inscription : pas de menu latéral ni d'en-tête
   document.getElementById('fixedTop').hidden = true;
   document.body.classList.remove('nav-open');
@@ -5909,6 +6813,7 @@ function showSignup() {
   document.getElementById('teamBtn').hidden = true;
   document.getElementById('securityBtn').hidden = true;
   document.getElementById('licencesBtn').hidden = true;
+  document.getElementById('consoleBtn').hidden = true;
   document.getElementById('app').hidden = true;
   document.getElementById('fabMove').hidden = true;
   document.getElementById('whoLabel').textContent = 'Non connecté';
@@ -5928,6 +6833,7 @@ function showSignup() {
   document.getElementById('fixedPanel-articles').hidden = true;
   document.getElementById('offlineStatus').hidden = true;
   document.getElementById('pendingBadge').hidden = true;
+  document.getElementById('failedBadge').hidden = true;
   // Écrans de connexion / inscription : pas de menu latéral ni d'en-tête
   document.getElementById('fixedTop').hidden = true;
   document.body.classList.remove('nav-open');
@@ -5996,7 +6902,7 @@ document.getElementById('joinForm').addEventListener('submit', async (e) => {
   const btn = document.getElementById('joinSubmitBtn');
   const errEl = document.getElementById('joinError');
   errEl.textContent = '';
-  if (!navigator.onLine) { errEl.textContent = 'Rejoindre une boutique nécessite une connexion internet.'; return; }
+  if (!isOnline()) { errEl.textContent = 'Rejoindre une boutique nécessite une connexion internet.'; return; }
   btn.disabled = true;
   try {
     const { data, error } = await supa.auth.signUp({ email, password, options: { data: { name } } });
@@ -6087,7 +6993,7 @@ async function copyText(text) {
 
 async function openTeamSheet() {
   if (!currentProfile || currentProfile.role !== 'owner') return;
-  if (!navigator.onLine) { toast('Connexion internet nécessaire.'); return; }
+  if (!isOnline()) { toast('Connexion internet nécessaire.'); return; }
   const [mem, inv] = await Promise.all([
     supa.from('profiles').select('id, email, display_name, role, created_at').order('created_at'),
     supa.from('shop_invitations').select('*').is('accepted_at', null).is('revoked_at', null).order('created_at', { ascending: false }),
@@ -6218,7 +7124,7 @@ document.getElementById('signupForm').addEventListener('submit', async (e) => {
   errEl.textContent = '';
   btn.disabled = true;
   try {
-    if (!navigator.onLine) {
+    if (!isOnline()) {
       throw new Error('La création d\'une boutique nécessite une connexion internet.');
     }
     const { data, error } = await supa.auth.signUp({
@@ -6310,13 +7216,16 @@ function readCachedProfile(userId) {
 }
 
 async function loadProfileAndEnter(userId) {
-  let { data, error } = await supa.from('profiles').select('*').eq('id', userId).single();
+  const profileQuery = supa.from('profiles').select('*').eq('id', userId).single();
+  let { data, error } = readCachedProfile(userId)
+    ? await withTimeout(profileQuery, 6000, { data: null, error: { message: 'Failed to fetch (timeout)' } })
+    : await profileQuery;
 
   if (error || !data) {
     // Hors-ligne (ou requête impossible pour raison réseau) : on retombe sur le
     // profil mis en cache lors d'une précédente connexion réussie, plutôt que
     // de déconnecter le vendeur — une coupure réseau n'est pas une erreur de compte.
-    if (!navigator.onLine || isLikelyNetworkError(error)) {
+    if (!isOnline() || isLikelyNetworkError(error)) {
       const cached = readCachedProfile(userId);
       if (cached) {
         currentProfile = cached;
@@ -6402,6 +7311,7 @@ function enterAppWithProfile() {
   applyRoleToUI();
   document.getElementById('fabMove').hidden = (currentTab !== 'stock');
   subscribeRealtime();
+  hydrateFromCache();
   loadArticles();
   loadMovements();
   loadCustomers();
@@ -6411,7 +7321,7 @@ function enterAppWithProfile() {
   loadDeliveries();
   loadShopInfo().then(loadTreasury);
   supa.rpc('log_session_start').then(() => {}, () => {});
-  supa.rpc('is_platform_admin').then(({ data }) => { document.getElementById('licencesBtn').hidden = data !== true; updateNavGroups(); }, () => {});
+  supa.rpc('is_platform_admin').then(({ data }) => { document.getElementById('licencesBtn').hidden = data !== true; document.getElementById('consoleBtn').hidden = data !== true; updateNavGroups(); }, () => {});
   setTimeout(() => loadDashboardStats(true), 1500);
   updateOnlineStatus();
   updatePendingBadge();
@@ -6432,7 +7342,9 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     await loadProfileAndEnter(data.user.id);
   } catch (err) {
     console.error(err);
-    errEl.textContent = 'Email ou mot de passe incorrect.';
+    errEl.textContent = isLikelyNetworkError(err) || !isOnline()
+      ? 'Pas de connexion internet : la connexion avec mot de passe nécessite internet. Si vous étiez déjà connecté sur ce poste, rouvrez simplement l\'app.'
+      : 'Email ou mot de passe incorrect.';
   } finally {
     btn.disabled = false;
   }
@@ -6505,9 +7417,27 @@ async function start() {
     document.getElementById('loginError').textContent = 'Session expirée après une longue inactivité. Reconnectez-vous.';
     return;
   }
-  const { data } = await supa.auth.getSession();
-  if (data.session) {
-    await loadProfileAndEnter(data.session.user.id);
+  const stored = readStoredAuthSession();
+  const res = await withTimeout(
+    supa.auth.getSession().catch(err => ({ data: null, error: err })),
+    stored ? 6000 : 20000,
+    { data: null, error: null, timeout: true });
+  if (res?.data?.session) {
+    await loadProfileAndEnter(res.data.session.user.id);
+    return;
+  }
+  // Démarrage sans internet avec une session dont le jeton a expiré (il ne peut
+  // pas être renouvelé) : la session reste enregistrée sur le poste, on entre
+  // avec le profil et les données en cache ; le jeton sera renouvelé
+  // automatiquement au retour de la connexion.
+  if (stored?.user?.id && (res.timeout || !isOnline() || isLikelyNetworkError(res.error))) {
+    const cached = readCachedProfile(stored.user.id);
+    if (cached) {
+      currentProfile = cached;
+      serverReachable = false;
+      enterAppWithProfile();
+      toast('Pas de connexion : vous travaillez avec les données enregistrées sur ce poste.');
+    }
   }
 }
 
