@@ -576,6 +576,7 @@ form { display: flex; flex-direction: column; gap: 14px; }
       <button class="tab-btn" data-tab="rapports" data-title="Rapports & exports" id="reportsTabBtn" hidden><svg class="nav-ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span>Rapports & exports</span><span class="nav-badge" id="navBadge-rapports" hidden></span></button>
       <button class="tab-btn sb-tool" id="teamBtn" hidden><svg class="nav-ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg><span>Équipe</span></button>
       <button class="tab-btn sb-tool" id="securityBtn" hidden><svg class="nav-ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></svg><span>Sécurité</span></button>
+      <button class="tab-btn sb-tool" id="licencesBtn" hidden><svg class="nav-ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 7a4 4 0 1 1-3.9 4.9L3 20v-3h3v-3h3l2.1-2.1A4 4 0 0 1 15 7zM16.5 8.5h.01"/></svg><span>Licences</span></button>
     </div>
     </nav>
     <div class="sb-spacer"></div>
@@ -777,6 +778,8 @@ form { display: flex; flex-direction: column; gap: 14px; }
     <p class="subtitle">Créez votre compte propriétaire</p>
     <form id="signupForm">
       <div class="field"><label for="signupShopName">Nom de la boutique</label><input id="signupShopName" type="text" required></div>
+      <div class="field" style="margin-top:10px"><label for="signupLicence">Code de licence</label><input id="signupLicence" type="text" required autocomplete="off" placeholder="EB-XXXX-XXXX" style="text-transform:uppercase; font-family:var(--font-mono)"></div>
+      <p class="current-stock-hint" style="margin-top:4px">Fourni lors de l'achat de votre licence ERP Boutique.</p>
       <div class="field" style="margin-top:10px"><label for="signupEmail">Email</label><input id="signupEmail" type="email" required autocomplete="username"></div>
       <div class="field" style="margin-top:10px"><label for="signupPassword">Mot de passe</label><input id="signupPassword" type="password" required minlength="8" autocomplete="new-password"></div>
       <p class="current-stock-hint" style="margin-top:4px">Au moins 8 caractères.</p>
@@ -816,6 +819,7 @@ form { display: flex; flex-direction: column; gap: 14px; }
     <form id="noShopCreateForm" style="margin-top:18px; padding-top:16px; border-top:1px solid var(--border)">
       <p class="current-stock-hint" style="margin:0 0 8px">Vous êtes propriétaire ? Créez votre boutique :</p>
       <div class="field"><label for="noShopNewName">Nom de la boutique</label><input id="noShopNewName" type="text" required autocomplete="organization"></div>
+      <div class="field" style="margin-top:10px"><label for="noShopLicence">Code de licence</label><input id="noShopLicence" type="text" required autocomplete="off" placeholder="EB-XXXX-XXXX" style="text-transform:uppercase; font-family:var(--font-mono)"></div>
       <button type="submit" class="btn btn-ghost btn-block" style="margin-top:10px">Créer ma boutique</button>
       <p class="login-error" id="noShopCreateError"></p>
     </form>
@@ -1032,6 +1036,7 @@ let movementsChannel = null;
 let customersChannel = null;
 let pendingCount = 0; // nombre de mouvements en attente de synchronisation (hors-ligne)
 let syncInProgress = false;
+let pendingLicenceCode = null; // code de licence saisi à l'inscription
 let pendingShopName = null; // nom choisi à l'inscription, en attente de confirmation d'email
 
 function isGerant() {
@@ -4512,6 +4517,72 @@ document.querySelector('.sidebar').addEventListener('click', e => { if (e.target
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('nav-open')) setNavOpen(false); });
 document.getElementById('posMobileBar').addEventListener('click', () => document.getElementById('posCart').scrollIntoView({ behavior: 'smooth', block: 'start' }));
 
+
+// ---------------------------------------------------------------------------
+// Licences (administrateur de la plateforme) : codes à usage unique exigés
+// pour créer une boutique (migration 013).
+// ---------------------------------------------------------------------------
+async function openLicencesSheet() {
+  const backdrop = openFormSheet({
+    title: 'Licences',
+    intro: '<div id="licBody" style="display:block"></div>',
+    fields: [],
+    submitLabel: 'Fermer',
+    onSubmit: async () => {},
+  });
+  const body = backdrop.querySelector('#licBody');
+  body.parentElement.className = '';
+  body.innerHTML = `
+    <div class="current-stock-hint" style="display:block; margin-bottom:10px">Un code par nouvelle boutique, à usage unique. Envoyez-le au client après paiement ; il le saisit à la création de sa boutique.</div>
+    <form id="licGenForm" style="display:flex; flex-direction:row; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:12px">
+      <input id="licNote" type="text" placeholder="Client / note (ex. Boutique Koné, Cocody)" aria-label="Client ou note" style="flex:1 1 240px; min-width:0; height:42px; padding:0 12px; border:1px solid #dde4df; border-radius:10px; background:#fff; font:inherit; font-size:0.9rem; color:var(--ink); box-sizing:border-box;">
+      <input id="licCount" type="number" min="1" max="50" value="1" style="width:76px; flex:none; height:42px; padding:0 12px; border:1px solid #dde4df; border-radius:10px; background:#fff; font:inherit; font-size:0.9rem; color:var(--ink); box-sizing:border-box;" aria-label="Nombre de codes">
+      <button type="submit" class="btn btn-primary">Générer</button>
+    </form>
+    <div id="licNew"></div>
+    <div id="licList"><div class="empty-state">Chargement…</div></div>`;
+  const listEl = body.querySelector('#licList');
+  const render = async () => {
+    const { data, error } = await supa.rpc('list_licence_codes');
+    if (error) { listEl.innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`; return; }
+    if (!data.length) { listEl.innerHTML = '<div class="empty-state">Aucun code généré pour l\'instant.</div>'; return; }
+    const st = c => c.revoked_at ? '<span class="pay-chip">Annulé</span>' : c.used_at ? '<span class="pay-chip especes">Utilisé</span>' : '<span class="pay-chip wave">Disponible</span>';
+    listEl.innerHTML = `<div class="report-table-wrap"><table class="report-table">
+      <thead><tr><th>Code</th><th>Client / note</th><th>État</th><th>Boutique créée</th><th></th></tr></thead>
+      <tbody>${data.map(c => `<tr>
+        <td style="font-family:var(--font-mono); white-space:nowrap">${escapeHtml(c.code)}</td>
+        <td>${escapeHtml(c.note || '')}<div class="current-stock-hint">${fmtDate(c.created_at)}</div></td>
+        <td>${st(c)}</td>
+        <td>${c.shop_name ? escapeHtml(c.shop_name) + `<div class="current-stock-hint">${escapeHtml(c.used_by_email || '')} · ${fmtDate(c.used_at)}</div>` : ''}</td>
+        <td style="white-space:nowrap">${!c.used_at && !c.revoked_at ? `<button type="button" class="card-link" data-copy="${escapeHtml(c.code)}">Copier</button><button type="button" class="card-link" style="color:var(--bad)" data-revoke="${escapeHtml(c.code)}">Annuler</button>` : ''}</td>
+      </tr>`).join('')}</tbody></table></div>`;
+  };
+  body.querySelector('#licGenForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const n = Number(body.querySelector('#licCount').value) || 1;
+    const note = body.querySelector('#licNote').value.trim();
+    const { data, error } = await supa.rpc('create_licence_codes', { p_count: n, p_note: note || null });
+    if (error) { toast('Génération impossible : ' + error.message); return; }
+    const codes = (data || []).map(r => typeof r === 'string' ? r : Object.values(r)[0]);
+    body.querySelector('#licNew').innerHTML = `<div class="pos-receipt" style="margin-bottom:12px; display:block">
+      ${codes.length} code(s) généré(s) : <strong style="font-family:var(--font-mono)">${codes.map(escapeHtml).join(', ')}</strong>
+      <button type="button" class="card-link" data-copy="${escapeHtml(codes.join('\n'))}">Copier</button></div>`;
+    body.querySelector('#licNote').value = '';
+    render();
+  });
+  body.addEventListener('click', async e => {
+    const c = e.target.closest('[data-copy]');
+    if (c) { try { await navigator.clipboard.writeText(c.dataset.copy); toast('Copié.'); } catch (err) { toast(c.dataset.copy); } return; }
+    const r = e.target.closest('[data-revoke]');
+    if (r) {
+      const { error } = await supa.rpc('revoke_licence_code', { p_code: r.dataset.revoke });
+      if (error) toast(error.message); else { toast('Code annulé.'); render(); }
+    }
+  });
+  render();
+}
+document.getElementById('licencesBtn').addEventListener('click', openLicencesSheet);
+
 // ---------------------------------------------------------------------------
 // Retours & remboursements (module 5)
 // ---------------------------------------------------------------------------
@@ -5805,6 +5876,7 @@ function showLogin() {
   document.getElementById('noShopScreen').hidden = true;
   document.getElementById('teamBtn').hidden = true;
   document.getElementById('securityBtn').hidden = true;
+  document.getElementById('licencesBtn').hidden = true;
   document.getElementById('app').hidden = true;
   document.getElementById('fabMove').hidden = true;
   document.getElementById('whoLabel').textContent = 'Non connecté';
@@ -5836,6 +5908,7 @@ function showSignup() {
   document.getElementById('noShopScreen').hidden = true;
   document.getElementById('teamBtn').hidden = true;
   document.getElementById('securityBtn').hidden = true;
+  document.getElementById('licencesBtn').hidden = true;
   document.getElementById('app').hidden = true;
   document.getElementById('fabMove').hidden = true;
   document.getElementById('whoLabel').textContent = 'Non connecté';
@@ -5961,7 +6034,8 @@ document.getElementById('noShopCreateForm').addEventListener('submit', async (e)
   errEl.textContent = '';
   if (!name) return;
   try {
-    const { error } = await supa.rpc('create_shop_and_owner', { p_shop_name: name });
+    const code = document.getElementById('noShopLicence').value.trim().toUpperCase();
+    const { error } = await supa.rpc('create_shop_and_owner', { p_shop_name: name, p_licence_code: code });
     if (error) throw error;
     const { data: u } = await supa.auth.getUser();
     toast('Boutique créée.');
@@ -6136,6 +6210,7 @@ document.getElementById('teamBtn').addEventListener('click', openTeamSheet);
 document.getElementById('signupForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const shopName = document.getElementById('signupShopName').value.trim();
+  const licenceCode = document.getElementById('signupLicence').value.trim().toUpperCase();
   const email = document.getElementById('signupEmail').value.trim();
   const password = document.getElementById('signupPassword').value;
   const btn = document.getElementById('signupSubmitBtn');
@@ -6148,7 +6223,7 @@ document.getElementById('signupForm').addEventListener('submit', async (e) => {
     }
     const { data, error } = await supa.auth.signUp({
       email, password,
-      options: { data: { shop_name: shopName }, emailRedirectTo: 'https://erp-boutique.pages.dev/' },
+      options: { data: { shop_name: shopName, licence_code: licenceCode }, emailRedirectTo: 'https://erp-boutique.pages.dev/' },
     });
     if (error) throw error;
     // Si la confirmation d'email est désactivée côté Supabase, signUp()
@@ -6157,11 +6232,12 @@ document.getElementById('signupForm').addEventListener('submit', async (e) => {
     // la création de la boutique se fera à la première connexion réussie
     // (voir loadProfileAndEnter / enterAppWithProfile ci-dessous).
     if (data.session) {
-      const { error: shopError } = await supa.rpc('create_shop_and_owner', { p_shop_name: shopName });
+      const { error: shopError } = await supa.rpc('create_shop_and_owner', { p_shop_name: shopName, p_licence_code: licenceCode });
       if (shopError) throw shopError;
       await loadProfileAndEnter(data.user.id);
     } else {
       pendingShopName = shopName;
+      pendingLicenceCode = licenceCode;
       errEl.textContent = '';
       toast('Compte créé. Vérifiez votre email pour confirmer, puis connectez-vous.');
       showLogin();
@@ -6264,21 +6340,27 @@ async function loadProfileAndEnter(userId) {
   // Première connexion après confirmation d'email suite à une inscription :
   // le profil existe (créé par le trigger côté serveur) mais n'a pas encore
   // de boutique — on la crée maintenant avec le nom choisi au moment du signup.
-  let metaShopName = null;
+  let metaShopName = null, metaLicence = null;
   if (!data.shop_id && !pendingShopName) {
-    try { const { data: u } = await supa.auth.getUser(); metaShopName = u?.user?.user_metadata?.shop_name || null; } catch (e) { /* non bloquant */ }
+    try {
+      const { data: u } = await supa.auth.getUser();
+      metaShopName = u?.user?.user_metadata?.shop_name || null;
+      metaLicence = u?.user?.user_metadata?.licence_code || null;
+    } catch (e) { /* non bloquant */ }
   }
   if (!data.shop_id && (pendingShopName || metaShopName)) {
     const shopNameToUse = pendingShopName || metaShopName;
+    const licenceToUse = pendingLicenceCode || metaLicence;
     pendingShopName = null;
+    pendingLicenceCode = null;
     try {
-      const { error: shopError } = await supa.rpc('create_shop_and_owner', { p_shop_name: shopNameToUse });
+      const { error: shopError } = await supa.rpc('create_shop_and_owner', { p_shop_name: shopNameToUse, p_licence_code: licenceToUse });
       if (shopError) throw shopError;
       const { data: refreshed } = await supa.from('profiles').select('*').eq('id', userId).single();
       if (refreshed) data = refreshed;
     } catch (err) {
       console.error(err);
-      toast("Compte connecté, mais la création de la boutique a échoué. Réessayez ou contactez le support.");
+      toast("Compte connecté, mais la boutique n'a pas pu être créée : " + (err.message || 'erreur') + '. Saisissez un code de licence valide ci-dessous.');
     }
   }
 
@@ -6329,6 +6411,7 @@ function enterAppWithProfile() {
   loadDeliveries();
   loadShopInfo().then(loadTreasury);
   supa.rpc('log_session_start').then(() => {}, () => {});
+  supa.rpc('is_platform_admin').then(({ data }) => { document.getElementById('licencesBtn').hidden = data !== true; updateNavGroups(); }, () => {});
   setTimeout(() => loadDashboardStats(true), 1500);
   updateOnlineStatus();
   updatePendingBadge();

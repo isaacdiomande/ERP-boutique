@@ -1,9 +1,9 @@
 // Service worker : met en cache la coquille de l'app (HTML, manifest, icônes)
 // pour un démarrage rapide et un minimum de résilience hors-ligne.
-// Les données (articles, mouvements) viennent toujours de Supabase en direct —
-// rien ici ne les met en cache.
+// Les données viennent toujours de Supabase en direct ; leur copie hors-ligne
+// est gérée par l'app elle-même (IndexedDB).
 
-const CACHE_NAME = 'erp-boutique-v2';
+const CACHE_NAME = 'erp-boutique-v3';
 const APP_SHELL = [
   './',
   './index.html',
@@ -11,6 +11,8 @@ const APP_SHELL = [
   './manifest.json',
   './icon-192.png',
   './icon-512.png',
+  './vendor/supabase-2.45.4.min.js',
+  './vendor/xlsx-0.18.5.full.min.js',
   './fonts/dm-sans-latin-400-normal.woff2',
   './fonts/dm-sans-latin-600-normal.woff2',
   './fonts/ibm-plex-mono-latin-500-normal.woff2',
