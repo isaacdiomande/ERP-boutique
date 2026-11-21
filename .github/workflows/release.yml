@@ -1,0 +1,75 @@
+name: Publier l'installeur Windows
+
+# Se déclenche quand une version est publiée :
+#   git tag v1.0.0
+#   git push origin v1.0.0
+# (ou manuellement depuis l'onglet "Actions" > "Publier l'installeur Windows" > "Run workflow")
+#
+# L'installeur est déposé dans le dépôt PUBLIC isaacdiomande/erp-boutique-releases
+# (aucun code dedans, seulement les installeurs). Lien permanent vers la dernière version :
+#   https://github.com/isaacdiomande/erp-boutique-releases/releases/latest/download/ERP-Boutique-Setup.exe
+#
+# Secrets nécessaires dans ERP-boutique : SUPABASE_URL, SUPABASE_ANON_KEY (déjà là)
+# et RELEASES_TOKEN (jeton GitHub avec droit "Contents: Read and write" sur erp-boutique-releases).
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  release-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+
+      - name: Installer Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Installer Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Générer config.js à partir des secrets du dépôt
+        shell: bash
+        run: |
+          cat > dist/config.js << CFG
+          window.SUPABASE_URL = "${{ secrets.SUPABASE_URL }}";
+          window.SUPABASE_ANON_KEY = "${{ secrets.SUPABASE_ANON_KEY }}";
+          CFG
+
+      - name: Installer les dépendances JS (CLI Tauri)
+        run: npm install
+
+      - name: Builder l'application
+        run: npm run build
+
+      - name: Préparer les fichiers à publier (noms fixes)
+        shell: bash
+        run: |
+          mkdir -p out
+          EXE=$(ls src-tauri/target/release/bundle/nsis/*-setup.exe 2>/dev/null | head -1)
+          MSI=$(ls src-tauri/target/release/bundle/msi/*.msi 2>/dev/null | head -1)
+          if [ -z "$EXE" ] && [ -z "$MSI" ]; then echo "Aucun installeur trouvé" && exit 1; fi
+          [ -n "$EXE" ] && cp "$EXE" out/ERP-Boutique-Setup.exe
+          [ -n "$MSI" ] && cp "$MSI" out/ERP-Boutique.msi
+          ls -l out
+
+      - name: Publier dans erp-boutique-releases
+        uses: softprops/action-gh-release@v2
+        with:
+          repository: isaacdiomande/erp-boutique-releases
+          token: ${{ secrets.RELEASES_TOKEN }}
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || format('build-{0}', github.run_number) }}
+          name: ERP Boutique ${{ github.ref_type == 'tag' && github.ref_name || format('build {0}', github.run_number) }}
+          body: |
+            Installeur Windows d'ERP Boutique.
+            Téléchargez **ERP-Boutique-Setup.exe**, lancez-le, puis ouvrez ERP Boutique depuis le menu Démarrer.
+            Page d'aide : https://erp-boutique.pages.dev/telecharger.html
+          files: out/*
+          make_latest: true
