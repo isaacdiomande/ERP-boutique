@@ -177,6 +177,20 @@ nav.tabs button.active .nav-badge { background: rgba(0,0,0,0.2); color: #fff; }
 .sb-user .logout-link-top { border-color: var(--sb-line); color: var(--sb-ink); }
 .sb-user .logout-link-top:hover { background: rgba(255,255,255,0.07); }
 .sb-user .role-badge { margin-left: 2px; }
+.app-version { font-size: 0.68rem; line-height: 1.4; color: var(--sb-ink); opacity: 0.6; letter-spacing: 0.02em; }
+.login-version { color: var(--ink-dim); opacity: 1; text-align: center; margin: 14px 0 0; }
+.update-note { text-align: left; font: inherit; font-size: 0.74rem; line-height: 1.35; color: #fff; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.22); border-radius: 8px; padding: 7px 9px; cursor: pointer; }
+.update-note:hover { background: rgba(255,255,255,0.16); }
+.help-link { display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; background: none; border: none; padding: 2px 0; font: inherit; font-size: 0.8rem; color: var(--sb-ink); cursor: pointer; }
+.help-link:hover { color: #fff; text-decoration: underline; }
+.help-card { border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; background: var(--surface); display: flex; flex-direction: column; gap: 8px; }
+.help-card h3 { margin: 0; font-size: 0.95rem; }
+.help-card .help-val { font-family: var(--font-mono); font-size: 0.95rem; }
+.help-card .help-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.help-card .help-actions .btn { flex: 1 1 auto; }
+.help-qr { display: flex; gap: 12px; align-items: center; }
+.help-qr svg { width: 112px; height: 112px; flex: none; background: #fff; border-radius: 8px; padding: 4px; }
+.help-info { font-size: 0.82rem; color: var(--ink-dim); background: var(--surface-sunken); border-radius: 10px; padding: 10px 12px; line-height: 1.5; white-space: pre-line; }
 .topbar { padding-block: 18px 14px; flex-wrap: wrap; }
 .topbar .brand { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .topbar .brand h1 { font-size: 1.55rem; font-weight: 700; letter-spacing: -0.01em; }
@@ -540,6 +554,7 @@ form { display: flex; flex-direction: column; gap: 14px; }
 .pdoc .ptotals .grand { font-weight: 700; font-size: 12pt; border-top: 2px solid #111; margin-top: 4px; padding-top: 6px; }
 .pdoc .pnotes { margin-top: 14px; font-size: 9pt; }
 .pdoc .plegal { margin-top: 18px; font-size: 8pt; color: #555; border-top: 1px solid #ddd; padding-top: 8px; }
+.pdoc::after { content: "Édité avec ERP-Boutique · © 2026 ERP-Boutique"; display: block; margin-top: 10px; font-size: 6.5pt; color: #888; text-align: center; }
 .pdoc .pstamp { display: inline-block; border: 2px solid #b23b3b; color: #b23b3b; font-weight: 700; padding: 2px 10px; border-radius: 4px; font-size: 11pt; margin-top: 6px; }
 /* Téléphone : menu en tiroir */
 .menu-toggle { display: none; }
@@ -613,6 +628,9 @@ form { display: flex; flex-direction: column; gap: 14px; }
         <button class="logout-link-top" id="changePasswordBtn" hidden>Mot de passe</button>
         <button class="logout-link-top" id="logoutBtn" hidden>Se déconnecter</button>
       </div>
+      <button type="button" class="update-note" id="updateNote" hidden></button>
+      <button type="button" class="help-link" id="helpBtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5v.7M12 17h.01"/></svg>Aide et contact</button>
+      <div class="app-version"><span id="appVersionSb"></span><br><span class="app-copyright"></span></div>
     </div>
   </aside>
   <div class="nav-scrim" id="navScrim" hidden></div>
@@ -799,6 +817,9 @@ form { display: flex; flex-direction: column; gap: 14px; }
     <button type="button" class="btn btn-ghost btn-block" style="margin-top:10px" id="showSignupBtn">Créer une boutique</button>
     <button type="button" class="btn btn-ghost btn-block" id="showJoinBtn">Rejoindre une boutique (code d'invitation)</button>
     <p class="current-stock-hint" id="desktopDownloadHint" style="margin-top:14px; text-align:center" hidden>Sur ordinateur, installez plutôt l'app Windows : <a href="telecharger.html">télécharger ERP Boutique</a>.</p>
+    <button type="button" class="btn btn-ghost btn-block" style="margin-top:14px" id="helpBtnLogin">Besoin d'aide ? Contacter le support</button>
+    <p class="app-version login-version" id="appVersionLogin"></p>
+    <p class="app-version login-version app-copyright" style="margin-top:2px"></p>
   </div>
 </div>
 
@@ -6842,6 +6863,133 @@ function showSignup() {
 document.getElementById('showSignupBtn').addEventListener('click', showSignup);
 // Lien vers l'installeur : seulement dans le navigateur (pas dans l'app de bureau Tauri)
 if (!window.__TAURI_INTERNALS__ && !window.__TAURI__) document.getElementById('desktopDownloadHint').hidden = false;
+
+// ---------------------------------------------------------------------------
+// Version de l'app
+// ---------------------------------------------------------------------------
+// À chaque publication : mettre le même numéro ici, dans src-tauri/tauri.conf.json
+// (champ "version") et dans le tag Git (vX.Y.Z).
+const APP_VERSION = '1.0.4';
+const IS_DESKTOP = !!(window.__TAURI_INTERNALS__ || window.__TAURI__);
+const DOWNLOAD_PAGE = 'https://erp-boutique.pages.dev/telecharger.html';
+(function showAppVersion() {
+  const label = `ERP-Boutique v${APP_VERSION} · ${IS_DESKTOP ? 'Windows' : 'Web'}`;
+  document.getElementById('appVersionSb').textContent = label;
+  document.getElementById('appVersionLogin').textContent = label;
+})();
+
+function compareVersions(a, b) {
+  const pa = String(a).replace(/^v/i, '').split('.').map(n => parseInt(n, 10) || 0);
+  const pb = String(b).replace(/^v/i, '').split('.').map(n => parseInt(n, 10) || 0);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    if ((pa[i] || 0) !== (pb[i] || 0)) return (pa[i] || 0) > (pb[i] || 0) ? 1 : -1;
+  }
+  return 0;
+}
+
+// App de bureau : vérifie une fois au démarrage si une version plus récente a
+// été publiée (la version web, elle, se met à jour toute seule).
+async function checkForUpdate() {
+  if (!IS_DESKTOP || !navigator.onLine) return;
+  try {
+    const res = await fetch('https://api.github.com/repos/isaacdiomande/erp-boutique-releases/releases/latest', { headers: { Accept: 'application/vnd.github+json' } });
+    if (!res.ok) return;
+    const latest = String((await res.json()).tag_name || '').replace(/^v/i, '');
+    if (!latest || compareVersions(latest, APP_VERSION) <= 0) return;
+    const note = document.getElementById('updateNote');
+    note.innerHTML = `<strong>Nouvelle version ${escapeHtml(latest)} disponible.</strong><br>Cliquez pour copier l'adresse de téléchargement.`;
+    note.hidden = false;
+    note.onclick = async () => {
+      try { await navigator.clipboard.writeText(DOWNLOAD_PAGE); toast('Adresse copiée : collez-la dans votre navigateur pour télécharger la mise à jour.'); }
+      catch (e) { toast('Téléchargez la mise à jour sur ' + DOWNLOAD_PAGE); }
+    };
+  } catch (e) { /* pas de réseau ou GitHub indisponible : on réessaiera au prochain démarrage */ }
+}
+setTimeout(checkForUpdate, 4000);
+
+// ---------------------------------------------------------------------------
+// Aide, contact du support et mentions
+// ---------------------------------------------------------------------------
+const SUPPORT_WHATSAPP = '2250708016315';
+const SUPPORT_WHATSAPP_DISPLAY = '+225 07 08 01 63 15';
+const SUPPORT_EMAIL = 'support.erpboutique@gmail.com';
+const COPYRIGHT_HOLDER = 'ERP-Boutique';
+const COPYRIGHT_START = 2026;
+(function showCopyright() {
+  const y = new Date().getFullYear();
+  const years = y > COPYRIGHT_START ? `${COPYRIGHT_START}–${y}` : String(COPYRIGHT_START);
+  document.querySelectorAll('.app-copyright').forEach(el => { el.textContent = `© ${years} ${COPYRIGHT_HOLDER}. Tous droits réservés.`; });
+})();
+
+function supportContext() {
+  const lines = [
+    `Boutique : ${shopInfo?.name || (currentProfile ? '—' : 'non connecté')}`,
+    `Compte : ${currentProfile?.email || currentProfile?.display_name || 'non connecté'}`,
+    `Version : ${APP_VERSION} (${IS_DESKTOP ? 'Windows' : 'Web'})`,
+  ];
+  return lines.join('\n');
+}
+
+async function copyText(text, okMsg) {
+  try { await navigator.clipboard.writeText(text); toast(okMsg); }
+  catch (e) { toast(text); }
+}
+
+async function openHelpSheet() {
+  const ctx = supportContext();
+  const msg = `Bonjour, j'ai besoin d'aide avec ERP-Boutique.\n\n${ctx}\n\nMon problème : `;
+  const wa = `https://wa.me/${SUPPORT_WHATSAPP}?text=${encodeURIComponent(msg)}`;
+  // QR code : message court pour un code peu dense, facile à scanner
+  const waShort = `https://wa.me/${SUPPORT_WHATSAPP}?text=${encodeURIComponent(`Bonjour, j'ai besoin d'aide avec ERP-Boutique (${shopInfo?.name || 'ma boutique'}, v${APP_VERSION}).`)}`;
+  const mail = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('Support ERP-Boutique' + (shopInfo?.name ? ' — ' + shopInfo.name : ''))}&body=${encodeURIComponent(msg)}`;
+  const backdrop = document.createElement('div');
+  backdrop.className = 'sheet-backdrop';
+  backdrop.innerHTML = `
+    <div class="sheet" style="width:min(520px, 100%)">
+      <div class="sheet-head"><h2>Aide et contact</h2><button class="sheet-close" type="button">✕</button></div>
+      <p style="margin:0">Une question, un problème ou une suggestion ? Le support ERP-Boutique vous répond.</p>
+      <div class="help-card">
+        <h3>WhatsApp</h3>
+        ${IS_DESKTOP ? `<div class="help-qr"><div id="helpQr"></div><div><div class="help-val">${SUPPORT_WHATSAPP_DISPLAY}</div><div class="current-stock-hint">Scannez ce code avec l'appareil photo de votre téléphone : la discussion WhatsApp s'ouvre avec un message déjà rempli.</div></div></div>`
+          : `<div class="help-val">${SUPPORT_WHATSAPP_DISPLAY}</div>`}
+        <div class="help-actions">
+          ${IS_DESKTOP ? '' : `<a class="btn btn-primary" href="${wa}" target="_blank" rel="noopener">Écrire sur WhatsApp</a>`}
+          <button type="button" class="btn btn-ghost" id="helpCopyNum">Copier le numéro</button>
+        </div>
+      </div>
+      <div class="help-card">
+        <h3>Email</h3>
+        <div class="help-val">${SUPPORT_EMAIL}</div>
+        <div class="help-actions">
+          ${IS_DESKTOP ? '' : `<a class="btn btn-ghost" href="${mail}">Envoyer un email</a>`}
+          <button type="button" class="btn btn-ghost" id="helpCopyMail">Copier l'adresse</button>
+        </div>
+      </div>
+      <div>
+        <div class="current-stock-hint" style="margin-bottom:6px">À indiquer dans votre message (déjà inclus avec les boutons) :</div>
+        <div class="help-info">${escapeHtml(ctx)}</div>
+        <button type="button" class="btn btn-ghost btn-block" style="margin-top:8px" id="helpCopyInfo">Copier ces informations</button>
+      </div>
+      <div class="current-stock-hint" style="text-align:center">ERP-Boutique v${APP_VERSION} · © ${COPYRIGHT_START}${new Date().getFullYear() > COPYRIGHT_START ? '–' + new Date().getFullYear() : ''} ${COPYRIGHT_HOLDER}. Tous droits réservés.</div>
+    </div>`;
+  document.body.appendChild(backdrop);
+  const close = () => backdrop.remove();
+  backdrop.addEventListener('click', e => { if (e.target === backdrop) close(); });
+  backdrop.querySelector('.sheet-close').addEventListener('click', close);
+  backdrop.querySelector('#helpCopyNum').addEventListener('click', () => copyText(SUPPORT_WHATSAPP_DISPLAY, 'Numéro copié.'));
+  backdrop.querySelector('#helpCopyMail').addEventListener('click', () => copyText(SUPPORT_EMAIL, 'Adresse copiée.'));
+  backdrop.querySelector('#helpCopyInfo').addEventListener('click', () => copyText(ctx, 'Informations copiées : collez-les dans votre message.'));
+  if (IS_DESKTOP) {
+    try {
+      await loadScriptOnce('vendor/zxing-library-0.21.3.min.js');
+      const svg = new window.ZXing.BrowserQRCodeSvgWriter().write(waShort, 220, 220);
+      svg.setAttribute('viewBox', `0 0 220 220`); svg.removeAttribute('width'); svg.removeAttribute('height');
+      backdrop.querySelector('#helpQr')?.appendChild(svg);
+    } catch (e) { console.error(e); }
+  }
+}
+document.getElementById('helpBtn').addEventListener('click', openHelpSheet);
+document.getElementById('helpBtnLogin').addEventListener('click', openHelpSheet);
 document.getElementById('showLoginBtn').addEventListener('click', showLogin);
 // ---------------------------------------------------------------------------
 // Équipe : rejoindre une boutique par code d'invitation, gestion des membres

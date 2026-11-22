@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "ERP Boutique",
-  "version": "1.0.3",
-  "identifier": "ci.pcci.erp-boutique",
+  "version": "1.0.4",
+  "identifier": "ci.erpboutique.app",
   "build": {
     "frontendDist": "../dist"
   },
